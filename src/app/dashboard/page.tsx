@@ -46,6 +46,11 @@ export default function Dashboard() {
   const [selectedShift, setSelectedShift] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState('');
+  const [totalWithdrawn, setTotalWithdrawn] = useState(0);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     const getProfile = async () => {
@@ -98,6 +103,17 @@ export default function Dashboard() {
         const totalSalary = normalSalary + otSalary;
         
         setSalary(totalSalary);
+      }
+
+      // ดึงข้อมูล withdrawals
+      const { data: withdrawals } = await supabase
+        .from('withdrawals')
+        .select('amount')
+        .eq('user_id', user.id);
+
+      if (withdrawals) {
+        const total = withdrawals.reduce((sum, w) => sum + w.amount, 0);
+        setTotalWithdrawn(total);
       }
     };
 
@@ -230,6 +246,65 @@ export default function Dashboard() {
     router.push('/');
   };
 
+  const handleWithdraw = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const amount = parseInt(withdrawAmount);
+      if (isNaN(amount) || amount <= 0) {
+        setError('กรุณาระบุจำนวนเงินที่ถูกต้อง');
+        return;
+      }
+
+      if (amount > salary - totalWithdrawn) {
+        setError('จำนวนเงินที่เบิกต้องไม่เกินยอดคงเหลือ');
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setError('กรุณาเข้าสู่ระบบ');
+        return;
+      }
+
+      const { error: insertError } = await supabase
+        .from('withdrawals')
+        .insert({
+          user_id: user.id,
+          amount: amount,
+          withdrawal_date: new Date().toISOString()
+        });
+
+      if (insertError) {
+        setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+        return;
+      }
+
+      // อัพเดทยอดเงินที่เบิกไปแล้ว
+      setTotalWithdrawn(prev => prev + amount);
+      
+      setShowPaymentModal(false);
+      setWithdrawAmount('');
+      
+      // แสดงข้อความแจ้งเตือนเมื่อสำเร็จ
+      setSuccessMessage(`เบิกเงินสำเร็จ ${amount.toLocaleString()} บาท`);
+      setShowSuccessModal(true);
+      
+      // ซ่อนข้อความแจ้งเตือนหลังจาก 3 วินาที
+      setTimeout(() => {
+        setShowSuccessModal(false);
+      }, 3000);
+
+    } catch {
+      setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (!profile) {
     return null;
   }
@@ -266,7 +341,10 @@ export default function Dashboard() {
           <p className="text-decorate text-sm">( rate : {profile.rate} )</p>
         </div>
         <p className="text-6xl font-league-gothic text-text-light tracking-wide">
-          {salary.toLocaleString()}
+          {(salary - totalWithdrawn).toLocaleString()}
+        </p>
+        <p className="text-sm text-text-light/40 mt-1">
+          เบิกไปแล้ว: {totalWithdrawn.toLocaleString()}
         </p>
         <div className="mt-4 h-px bg-text-light/10" />
       </div>
@@ -310,7 +388,6 @@ export default function Dashboard() {
         <button 
           className="btn h-14 text-lg font-medium relative"
           onClick={() => {
-            // แปลงวันที่ปัจจุบันให้อยู่ในรูปแบบ YYYY-MM-DD
             const today = new Date();
             const year = today.getFullYear();
             const month = String(today.getMonth() + 1).padStart(2, '0');
@@ -332,7 +409,10 @@ export default function Dashboard() {
             </span>
           </div>
         </button>
-        <button className="btn h-14 text-lg font-medium">
+        <button 
+          className="btn h-14 text-lg font-medium"
+          onClick={() => setShowPaymentModal(true)}
+        >
           Payment
         </button>
       </div>
@@ -667,6 +747,75 @@ export default function Dashboard() {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-bg-dark rounded-lg p-6 w-full max-w-[340px]">
+            <h2 className="text-2xl font-league-gothic text-text-light mb-6">เบิกเงิน</h2>
+            
+            <form onSubmit={handleWithdraw} className="space-y-4">
+              <div>
+                <label className="block text-text-light mb-1.5 text-sm">จำนวนเงิน</label>
+                <input
+                  type="number"
+                  className="input w-full h-11"
+                  value={withdrawAmount}
+                  onChange={(e) => setWithdrawAmount(e.target.value)}
+                  placeholder="ระบุจำนวนเงิน"
+                  required
+                  min="1"
+                  max={salary - totalWithdrawn}
+                />
+              </div>
+
+              <div className="text-sm text-text-light/60">
+                <p>ยอดเงินคงเหลือ: {(salary - totalWithdrawn).toLocaleString()}</p>
+              </div>
+
+              {error && (
+                <div className="text-red-500 text-sm text-center bg-red-100/10 p-2 rounded">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPaymentModal(false);
+                    setWithdrawAmount('');
+                    setError('');
+                  }}
+                  className="btn-secondary flex-1 h-11"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="btn flex-1 h-11"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <span className="inline-block animate-spin">
+                      <i className="fas fa-circle-notch text-text-light"></i>
+                    </span>
+                  ) : (
+                    'เบิกเงิน'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-green-500/90 text-white px-4 py-2 rounded-lg shadow-lg">
+          {successMessage}
         </div>
       )}
     </main>

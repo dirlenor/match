@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { sendTelegramMessage } from '@/utils/telegram';
 
 interface Profile {
   name: string;
@@ -179,6 +180,10 @@ export default function Dashboard() {
         return;
       }
 
+      // อ่งการแจ้งเตือนไปยัง Telegram
+      const shiftLabel = SHIFTS[selectedShift as keyof typeof SHIFTS]?.label || selectedShift;
+      await sendTelegramMessage(`✅ <b>Check-in</b>\nวันที่: ${checkDate}\nกะ: ${shiftLabel}\nผู้ใช้: ${profile?.name || 'ไม่ระบุชื่อ'}`);
+
       // อัพเดท salary และ day time
       if (profile) {
         const { data: checkIns } = await supabase
@@ -311,6 +316,9 @@ export default function Dashboard() {
         setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
         return;
       }
+
+      // อ่งการแจ้งเตือนไปยัง Telegram
+      await sendTelegramMessage(`💰 <b>การเบิกเงิน</b>\nจำนวน: ${amount.toLocaleString()} บาท\nวันที่: ${new Date(withdrawalDate).toLocaleDateString('th-TH')}\nผู้ใช้: ${profile?.name || 'ไม่ระบุชื่อ'}`);
 
       // อัพเดทยอดเงินที่เบิกไปแล้ว
       setTotalWithdrawn(prev => prev + amount);

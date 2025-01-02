@@ -22,7 +22,7 @@ h1, h2 {
 
 @layer components {
   .btn {
-    @apply bg-transparent text-text-light border-2 border-text-light rounded-input px-4 py-2 transition-all hover:bg-text-light hover:text-bg-dark mt-32;
+    @apply bg-transparent text-text-light border-2 border-text-light rounded-input px-4 py-2 transition-all hover:bg-text-light hover:text-bg-dark;
   }
   
   .input {

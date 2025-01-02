@@ -6,8 +6,8 @@ export default function Register() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-4 pt-16">
       <div className="text-center mb-16">
-        <h1 className="text-[80px] sm:text-[120px] font-league-gothic text-text-light leading-none tracking-wide">MATCH</h1>
-        <h2 className="text-[80px] sm:text-[120px] font-league-gothic text-text-light leading-none tracking-wide">TIME</h2>
+        <h1 className="text-[120px] sm:text-[167px] font-league-gothic text-text-light leading-none tracking-wide">MATCH</h1>
+        <h2 className="text-[120px] sm:text-[167px] font-league-gothic text-text-light leading-none tracking-wide">TIME</h2>
         <p className="text-text-light mt-4 text-sm">Check in your time and request payment app.</p>
       </div>
 
@@ -39,12 +39,14 @@ export default function Register() {
               />
             </div>
           </div>
-          <button 
-            type="submit" 
-            className="btn w-full h-11 group"
-          >
-            <i className="fas fa-arrow-right text-text-light group-hover:text-bg-dark"></i>
-          </button>
+          <div className="mt-32">
+            <button 
+              type="submit" 
+              className="btn w-full h-11 group"
+            >
+              <i className="fas fa-arrow-right text-text-light group-hover:text-bg-dark"></i>
+            </button>
+          </div>
         </form>
 
         <div className="text-center mt-4">

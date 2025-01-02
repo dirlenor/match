@@ -225,6 +225,11 @@ export default function Dashboard() {
     }
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
+
   if (!profile) {
     return null;
   }
@@ -301,10 +306,20 @@ export default function Dashboard() {
       </div>
 
       {/* Action Buttons */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-4 mb-8">
         <button 
           className="btn h-14 text-lg font-medium relative"
-          onClick={() => setShowCheckInModal(true)}
+          onClick={() => {
+            // แปลงวันที่ปัจจุบันให้อยู่ในรูปแบบ YYYY-MM-DD
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const formattedDate = `${year}-${month}-${day}`;
+            
+            setCheckDate(formattedDate);
+            setShowCheckInModal(true);
+          }}
         >
           <div className="flex flex-col items-center">
             <span>Check in</span>
@@ -319,6 +334,16 @@ export default function Dashboard() {
         </button>
         <button className="btn h-14 text-lg font-medium">
           Payment
+        </button>
+      </div>
+
+      {/* Logout */}
+      <div className="text-center">
+        <button 
+          onClick={handleLogout}
+          className="text-xs text-text-light/40 hover:text-accent transition-colors"
+        >
+          Logout
         </button>
       </div>
 
@@ -516,24 +541,39 @@ export default function Dashboard() {
 
                 // สร้างอาเรย์ของสัปดาห์
                 const weeks: CalendarDay[][] = [];
-                const currentDay = new Date(firstCalendarDay);
+                let currentWeek: CalendarDay[] = [];
+                let currentDate = new Date(firstCalendarDay);
 
-                while (currentDay <= lastDay || currentDay.getDay() !== 0) {
-                  if (currentDay.getDay() === 0) {
-                    weeks.push([]);
+                while (currentDate <= lastDay || currentDate.getDay() !== 0) {
+                  if (currentDate.getDay() === 0 && currentWeek.length > 0) {
+                    weeks.push(currentWeek);
+                    currentWeek = [];
                   }
 
-                  const dateString = currentDay.toISOString().split('T')[0];
+                  // แปลงวันที่เป็น YYYY-MM-DD โดยไม่ใช้ toISOString
+                  const year = currentDate.getFullYear();
+                  const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                  const day = String(currentDate.getDate()).padStart(2, '0');
+                  const dateString = `${year}-${month}-${day}`;
+                  
                   const shift = checkInMap.get(dateString);
                   
-                  weeks[weeks.length - 1].push({
-                    date: new Date(currentDay),
-                    isCurrentMonth: currentDay.getMonth() === today.getMonth(),
+                  // แสดงข้อมูลเพื่อ debug
+                  console.log('Date:', dateString, 'Has Check-in:', Boolean(shift), 'Shift:', shift);
+                  
+                  currentWeek.push({
+                    date: new Date(currentDate),
+                    isCurrentMonth: currentDate.getMonth() === today.getMonth(),
                     hasCheckIn: Boolean(shift),
                     shift: shift
                   });
 
-                  currentDay.setDate(currentDay.getDate() + 1);
+                  currentDate = new Date(currentDate);
+                  currentDate.setDate(currentDate.getDate() + 1);
+                }
+
+                if (currentWeek.length > 0) {
+                  weeks.push(currentWeek);
                 }
 
                 return (
@@ -550,7 +590,7 @@ export default function Dashboard() {
                             `}
                           >
                             <span className="text-sm">{day.date.getDate()}</span>
-                            {day.hasCheckIn && (
+                            {day.hasCheckIn && day.shift && (
                               <div 
                                 className={`
                                   w-1.5 h-1.5 rounded-full mt-0.5

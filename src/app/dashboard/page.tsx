@@ -51,6 +51,11 @@ export default function Dashboard() {
   const [totalWithdrawn, setTotalWithdrawn] = useState(0);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showWithdrawalHistoryModal, setShowWithdrawalHistoryModal] = useState(false);
+  const [withdrawalHistory, setWithdrawalHistory] = useState<Array<{
+    amount: number;
+    withdrawal_date: string;
+  }>>([]);
 
   useEffect(() => {
     const getProfile = async () => {
@@ -114,6 +119,17 @@ export default function Dashboard() {
       if (withdrawals) {
         const total = withdrawals.reduce((sum, w) => sum + w.amount, 0);
         setTotalWithdrawn(total);
+      }
+
+      // ดึงข้อมูลประวัติการเบิกเงิน
+      const { data: withdrawalHistory } = await supabase
+        .from('withdrawals')
+        .select('amount, withdrawal_date')
+        .eq('user_id', user.id)
+        .order('withdrawal_date', { ascending: false });
+
+      if (withdrawalHistory) {
+        setWithdrawalHistory(withdrawalHistory);
       }
     };
 
@@ -270,12 +286,13 @@ export default function Dashboard() {
         return;
       }
 
+      const withdrawalDate = new Date().toISOString();
       const { error: insertError } = await supabase
         .from('withdrawals')
         .insert({
           user_id: user.id,
           amount: amount,
-          withdrawal_date: new Date().toISOString()
+          withdrawal_date: withdrawalDate
         });
 
       if (insertError) {
@@ -285,6 +302,12 @@ export default function Dashboard() {
 
       // อัพเดทยอดเงินที่เบิกไปแล้ว
       setTotalWithdrawn(prev => prev + amount);
+      
+      // อัพเดทประวัติการเบิกเงินทันที
+      setWithdrawalHistory(prev => [{
+        amount: amount,
+        withdrawal_date: withdrawalDate
+      }, ...prev]);
       
       setShowPaymentModal(false);
       setWithdrawAmount('');
@@ -340,12 +363,17 @@ export default function Dashboard() {
           <p className="text-text-light/60 text-sm">Salary</p>
           <p className="text-decorate text-sm">( rate : {profile.rate} )</p>
         </div>
-        <p className="text-6xl font-league-gothic text-text-light tracking-wide">
-          {(salary - totalWithdrawn).toLocaleString()}
-        </p>
-        <p className="text-sm text-text-light/40 mt-1">
-          เบิกไปแล้ว: {totalWithdrawn.toLocaleString()}
-        </p>
+        <button 
+          onClick={() => setShowWithdrawalHistoryModal(true)}
+          className="w-full text-left group"
+        >
+          <p className="text-6xl font-league-gothic text-text-light tracking-wide group-hover:text-accent transition-colors">
+            {(salary - totalWithdrawn).toLocaleString()}
+          </p>
+          <p className="text-sm text-text-light/40 mt-1">
+            เบิกไปแล้ว: {totalWithdrawn.toLocaleString()}
+          </p>
+        </button>
         <div className="mt-4 h-px bg-text-light/10" />
       </div>
 
@@ -816,6 +844,52 @@ export default function Dashboard() {
       {showSuccessModal && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-green-500/90 text-white px-4 py-2 rounded-lg shadow-lg">
           {successMessage}
+        </div>
+      )}
+
+      {/* Withdrawal History Modal */}
+      {showWithdrawalHistoryModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-bg-dark rounded-lg p-6 w-full max-w-[340px]">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-league-gothic text-text-light">ประวัติการเบิกเงิน</h2>
+              <button 
+                onClick={() => setShowWithdrawalHistoryModal(false)}
+                className="text-text-light/60 hover:text-accent"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+            
+            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+              {withdrawalHistory.map((withdrawal, index) => (
+                <div 
+                  key={index}
+                  className="flex items-center justify-between p-3 rounded bg-white/5"
+                >
+                  <div>
+                    <p className="text-text-light">
+                      {new Date(withdrawal.withdrawal_date).toLocaleDateString('th-TH', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      })}
+                    </p>
+                    <p className="text-accent text-sm">
+                      {withdrawal.amount.toLocaleString()} บาท
+                    </p>
+                  </div>
+                  <div className="w-2 h-2 rounded-full bg-accent" />
+                </div>
+              ))}
+
+              {withdrawalHistory.length === 0 && (
+                <p className="text-text-light/60 text-center py-4">
+                  ไม่มีประวัติการเบิกเงิน
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </main>

@@ -16,6 +16,7 @@ const config: Config = {
       fontFamily: {
         "league-gothic": ["League Gothic", "sans-serif"],
         "lato": ["Lato", "sans-serif"],
+        "athiti": ["Athiti", "sans-serif"],
       },
       fontSize: {
         "h1": "167px",

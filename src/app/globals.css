@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=League+Gothic&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&family=League+Gothic&family=Athiti:wght@400;500;600&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css');
 
 @tailwind base;
@@ -13,7 +13,7 @@
 body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));
-  font-family: 'Lato', sans-serif;
+  font-family: 'Athiti', 'Lato', sans-serif;
 }
 
 h1, h2 {
@@ -28,6 +28,25 @@ h1, h2 {
   .input {
     @apply bg-text-light text-bg-dark rounded-input px-4 py-2 w-full border-2 border-transparent focus:border-accent focus:outline-none transition-all;
   }
+}
+
+/* Custom checkbox styles */
+input[type="checkbox"] {
+  @apply cursor-pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid rgb(var(--foreground-rgb));
+  border-radius: 4px;
+  outline: none;
+  transition: all 0.2s ease-in-out;
+}
+
+input[type="checkbox"]:checked {
+  @apply bg-accent border-accent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23222222'%3E%3Cpath fill-rule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clip-rule='evenodd'/%3E%3C/svg%3E");
+  background-size: 75% 75%;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 /* Add smooth transition for tab switching */

@@ -25,24 +25,53 @@ export default function Profile() {
         return;
       }
 
-      const { error: upsertError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          name,
-          age: parseInt(age),
-          rate: parseInt(rate),
-          updated_at: new Date().toISOString(),
-        });
-
-      if (upsertError) {
-        setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+      if (!name || !age || !rate) {
+        setError('กรุณากรอกข้อมูลให้ครบถ้วน');
         return;
       }
 
+      const profileData = {
+        id: user.id,
+        name: name.trim(),
+        age: parseInt(age),
+        rate: parseInt(rate),
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('Saving profile data:', profileData);
+
+      const { error: upsertError } = await supabase
+        .from('profiles')
+        .upsert(profileData);
+
+      if (upsertError) {
+        console.error('Supabase error:', upsertError);
+        setError(`เกิดข้อผิดพลาด: ${upsertError.message}`);
+        return;
+      }
+
+      const { data: checkData, error: checkError } = await supabase
+        .from('profiles')
+        .select()
+        .eq('id', user.id)
+        .single();
+
+      if (checkError) {
+        console.error('Error checking profile:', checkError);
+        setError('ไม่สามารถตรวจสอบข้อมูลที่บันทึกได้');
+        return;
+      }
+
+      if (!checkData) {
+        setError('ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
+        return;
+      }
+
+      console.log('Profile saved successfully:', checkData);
       router.push('/dashboard');
-    } catch {
-      setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setError('เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
     }

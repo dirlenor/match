@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signUp } from '@/lib/auth';
 
 export default function Register() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -74,6 +76,8 @@ export default function Register() {
         return;
       }
       setSuccess(true);
+      // Redirect to profile page after successful registration
+      router.push('/profile');
     } catch {
       setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     } finally {
@@ -134,11 +138,7 @@ export default function Register() {
           {success && (
             <div className="space-y-2">
               <div className="text-green-500 text-sm text-center bg-green-100/10 p-2 rounded">
-                ลงทะเบียนสำเร็จ! กรุณาตรวจสอบอีเมลของคุณ
-              </div>
-              <div className="text-text-light text-sm text-center">
-                เราได้ส่งลิงก์ยืนยันไปที่ <span className="text-accent">{email}</span>
-                <br />กรุณาคลิกที่ลิงก์เพื่อยืนยันอีเมลก่อนเข้าสู่ระบบ
+                ลงทะเบียนสำเร็จ! กรลังพาคุณไปยังหน้ากรอกข้อมูลส่วนตัว...
               </div>
             </div>
           )}

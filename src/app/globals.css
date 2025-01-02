@@ -22,10 +22,20 @@ h1, h2 {
 
 @layer components {
   .btn {
-    @apply bg-accent text-text-light rounded-input px-4 py-2;
+    @apply bg-accent text-text-light rounded-input px-4 py-2 transition-all hover:bg-opacity-90;
   }
   
   .input {
-    @apply bg-text-light text-bg-dark rounded-input px-4 py-2;
+    @apply bg-text-light text-bg-dark rounded-input px-4 py-2 w-full border-2 border-transparent focus:border-accent focus:outline-none transition-all;
   }
+}
+
+/* Add smooth transition for tab switching */
+.tab-content {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Add swipe animation */
+.swipe-container {
+  touch-action: pan-y pinch-zoom;
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import Link from 'next/link';
+
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-4 pt-16">
@@ -38,9 +40,9 @@ export default function Home() {
         </form>
 
         <div className="text-center mt-4">
-          <a href="/register" className="text-text-light hover:text-accent text-sm">
-            Don't have an account? Register here
-          </a>
+          <Link href="/register" className="text-text-light hover:text-accent text-sm">
+            Don&apos;t have an account? Register here
+          </Link>
         </div>
       </div>
     </main>

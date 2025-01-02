@@ -1,5 +1,7 @@
 "use client";
 
+import Link from 'next/link';
+
 export default function Register() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-4 pt-16">
@@ -46,9 +48,9 @@ export default function Register() {
         </form>
 
         <div className="text-center mt-4">
-          <a href="/" className="text-text-light hover:text-accent text-sm">
+          <Link href="/" className="text-text-light hover:text-accent text-sm">
             Already have an account? Login here
-          </a>
+          </Link>
         </div>
       </div>
     </main>

@@ -1,8 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../auth/AuthContext';
 
 const Summary = () => {
-  const { user } = useAuth();
   const [summaryData, setSummaryData] = useState(null);
 
   useEffect(() => {

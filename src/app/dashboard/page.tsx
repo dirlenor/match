@@ -1,11 +1,50 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabase';
+
+interface Profile {
+  name: string;
+  rate: number;
+}
 
 export default function Dashboard() {
+  const router = useRouter();
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [dayTime] = useState(10);
   const [overTime] = useState(4);
   const [salary] = useState(5000);
+
+  useEffect(() => {
+    const getProfile = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        router.push('/');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name, rate')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile) {
+        router.push('/profile');
+        return;
+      }
+
+      setProfile(profile);
+    };
+
+    getProfile();
+  }, [router]);
+
+  if (!profile) {
+    return null;
+  }
 
   return (
     <main className="min-h-screen bg-bg-dark p-8">
@@ -18,8 +57,8 @@ export default function Dashboard() {
       <div className="mb-12">
         <p className="text-text-light/60 text-sm mb-1">Welcome ,</p>
         <div className="flex items-baseline gap-2">
-          <h2 className="text-6xl font-league-gothic text-text-light tracking-wide">CAPTAIN</h2>
-          <span className="text-6xl font-league-gothic text-accent">41</span>
+          <h2 className="text-6xl font-league-gothic text-text-light tracking-wide">{profile.name.toUpperCase()}</h2>
+          <span className="text-6xl font-league-gothic text-accent">{profile.rate}</span>
         </div>
         <div className="mt-4 h-px bg-text-light/10" />
       </div>

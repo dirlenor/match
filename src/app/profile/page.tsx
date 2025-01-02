@@ -41,7 +41,7 @@ export default function Profile() {
       }
 
       router.push('/dashboard');
-    } catch (err) {
+    } catch {
       setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);

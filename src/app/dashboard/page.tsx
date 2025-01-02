@@ -13,9 +13,9 @@ interface Profile {
 export default function Dashboard() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [dayTime, setDayTime] = useState(0);
-  const [overTime, setOverTime] = useState(0);
-  const [salary, setSalary] = useState(0);
+  const [dayTime] = useState(0);
+  const [overTime] = useState(0);
+  const [salary] = useState(0);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editName, setEditName] = useState('');
   const [editAge, setEditAge] = useState('');
@@ -87,7 +87,7 @@ export default function Dashboard() {
       });
       
       setShowEditModal(false);
-    } catch (err) {
+    } catch {
       setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);

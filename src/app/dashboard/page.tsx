@@ -10,7 +10,7 @@ export default function Dashboard() {
   return (
     <main className="min-h-screen bg-bg-dark p-8">
       {/* Logo */}
-      <div className="mb-12">
+      <div className="mb-12 text-center">
         <h1 className="text-3xl font-league-gothic text-text-light tracking-wide">MATCH</h1>
       </div>
 
@@ -21,6 +21,7 @@ export default function Dashboard() {
           <h2 className="text-6xl font-league-gothic text-text-light tracking-wide">CAPTAIN</h2>
           <span className="text-6xl font-league-gothic text-accent">41</span>
         </div>
+        <div className="mt-4 h-px bg-text-light/10" />
       </div>
 
       {/* Salary Section */}
@@ -29,6 +30,7 @@ export default function Dashboard() {
         <p className="text-6xl font-league-gothic text-text-light tracking-wide">
           {salary.toLocaleString()}
         </p>
+        <div className="mt-4 h-px bg-text-light/10" />
       </div>
 
       {/* Day Time Section */}
@@ -41,12 +43,14 @@ export default function Dashboard() {
             style={{ width: `${(dayTime / 24) * 100}%` }}
           />
         </div>
+        <div className="mt-4 h-px bg-text-light/10" />
       </div>
 
       {/* Over Time Section */}
       <div className="mb-12">
         <p className="text-text-light/60 text-sm mb-1">Over Time</p>
         <p className="text-6xl font-league-gothic text-text-light tracking-wide">{overTime}</p>
+        <div className="mt-4 h-px bg-text-light/10" />
       </div>
 
       {/* Action Buttons */}

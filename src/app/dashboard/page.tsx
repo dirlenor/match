@@ -296,10 +296,19 @@ export default function Dashboard() {
       {/* Action Buttons */}
       <div className="grid grid-cols-2 gap-4">
         <button 
-          className="btn h-14 text-lg font-medium"
+          className="btn h-14 text-lg font-medium relative"
           onClick={() => setShowCheckInModal(true)}
         >
-          Check in
+          <div className="flex flex-col items-center">
+            <span>Check in</span>
+            <span className="text-xs text-text-light/60 -mt-1">
+              {new Date().toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: '2-digit',
+                year: '2-digit'
+              })}
+            </span>
+          </div>
         </button>
         <button className="btn h-14 text-lg font-medium">
           Payment
@@ -458,7 +467,7 @@ export default function Dashboard() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-bg-dark rounded-lg p-6 w-full max-w-[340px]">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-league-gothic text-text-light">รายการลงเวลา</h2>
+              <h2 className="text-2xl font-league-gothic text-text-light">รฏิทินลงเวลา</h2>
               <button 
                 onClick={() => setShowDayTimeModal(false)}
                 className="text-text-light/60 hover:text-accent"
@@ -467,27 +476,106 @@ export default function Dashboard() {
               </button>
             </div>
             
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto">
-              {checkInList.map((checkIn, index) => (
-                <div 
-                  key={index}
-                  className="flex items-center justify-between p-3 rounded bg-white/5"
-                >
-                  <div>
-                    <p className="text-text-light">
-                      {new Date(checkIn.check_date).toLocaleDateString('th-TH', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </p>
-                    <p className="text-text-light/60 text-sm">
-                      {SHIFTS[checkIn.shift as keyof typeof SHIFTS].label}
-                    </p>
+            <div className="space-y-6">
+              {/* ส่วนหัวปฏิทิน */}
+              <div className="grid grid-cols-7 gap-1 text-center text-text-light/60 text-sm">
+                <div>อา</div>
+                <div>จ</div>
+                <div>อ</div>
+                <div>พ</div>
+                <div>พฤ</div>
+                <div>ศ</div>
+                <div>ส</div>
+              </div>
+
+              {/* สร้างปฏิทินจากข้อมูล check-in */}
+              {(() => {
+                // สร้าง Map ของวันที่มีการ check-in
+                const checkInMap = new Map(
+                  checkInList.map(checkIn => [
+                    checkIn.check_date,
+                    checkIn.shift
+                  ])
+                );
+
+                // หาวันแรกและวันสุดท้ายของเดือนปัจจุบัน
+                const today = new Date();
+                const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+
+                // หาวันแรกที่จะแสดงในปฏิทิน (อาจจะเป็นวันในเดือนก่อน)
+                const firstCalendarDay = new Date(firstDay);
+                firstCalendarDay.setDate(firstCalendarDay.getDate() - firstCalendarDay.getDay());
+
+                // สร้างอาเรย์ของสัปดาห์
+                const weeks = [];
+                let currentDay = new Date(firstCalendarDay);
+
+                while (currentDay <= lastDay || currentDay.getDay() !== 0) {
+                  if (currentDay.getDay() === 0) {
+                    weeks.push([]);
+                  }
+
+                  const dateString = currentDay.toISOString().split('T')[0];
+                  const shift = checkInMap.get(dateString);
+                  
+                  weeks[weeks.length - 1].push({
+                    date: new Date(currentDay),
+                    isCurrentMonth: currentDay.getMonth() === today.getMonth(),
+                    hasCheckIn: Boolean(shift),
+                    shift: shift
+                  });
+
+                  currentDay.setDate(currentDay.getDate() + 1);
+                }
+
+                return (
+                  <div className="grid gap-1">
+                    {weeks.map((week, weekIndex) => (
+                      <div key={weekIndex} className="grid grid-cols-7 gap-1">
+                        {week.map((day, dayIndex) => (
+                          <div
+                            key={dayIndex}
+                            className={`
+                              aspect-square flex flex-col items-center justify-center rounded
+                              ${day.isCurrentMonth ? 'text-text-light' : 'text-text-light/20'}
+                              ${day.hasCheckIn ? 'bg-white/5' : ''}
+                            `}
+                          >
+                            <span className="text-sm">{day.date.getDate()}</span>
+                            {day.hasCheckIn && (
+                              <div 
+                                className={`
+                                  w-1.5 h-1.5 rounded-full mt-0.5
+                                  ${day.shift === 'morning' ? 'bg-yellow-500' : 
+                                    day.shift === 'evening' ? 'bg-blue-500' : 
+                                    'bg-accent'}
+                                `}
+                              />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
                   </div>
-                  <div className="w-2 h-2 rounded-full bg-accent" />
+                );
+              })()}
+
+              {/* คำอธิบายสัญลักษณ์ */}
+              <div className="flex items-center justify-center gap-4 text-sm text-text-light/60">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
+                  <span>เช้า</span>
                 </div>
-              ))}
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                  <span>เย็น</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+                  <span>OT</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

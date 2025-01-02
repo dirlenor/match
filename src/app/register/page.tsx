@@ -84,7 +84,7 @@ export default function Register() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-4 pt-16">
       <div className="text-center mb-16">
-        <h1 className="text-[120px] sm:text-[167px] font-league-gothic text-text-light leading-none tracking-wide">MATCH</h1>
+        <h1 className="text-[120px] sm:text-[167px] font-league-gothic text-text-light leading-none tracking-[-2%]">MATCH</h1>
         <h2 className="text-[120px] sm:text-[167px] font-league-gothic text-text-light leading-none tracking-wide">TIME</h2>
         <p className="text-text-light mt-4 text-sm">Check in your time and request payment app.</p>
       </div>

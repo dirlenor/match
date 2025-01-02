@@ -25,28 +25,50 @@ export default function Profile() {
         return;
       }
 
+      if (!user.email) {
+        setError('ไม่พบข้อมูลอีเมล');
+        return;
+      }
+
       if (!name || !age || !rate) {
         setError('กรุณากรอกข้อมูลให้ครบถ้วน');
         return;
       }
+
+      const { data: existingProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
 
       const profileData = {
         id: user.id,
         name: name.trim(),
         age: parseInt(age),
         rate: parseInt(rate),
+        email: user.email,
+        is_admin: user.email === 'thanawat.siriwisitthana@gmail.com',
         updated_at: new Date().toISOString()
       };
 
-      console.log('Saving profile data:', profileData);
+      let error;
+      
+      if (existingProfile) {
+        const { error: updateError } = await supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('id', user.id);
+        error = updateError;
+      } else {
+        const { error: insertError } = await supabase
+          .from('profiles')
+          .insert(profileData);
+        error = insertError;
+      }
 
-      const { error: upsertError } = await supabase
-        .from('profiles')
-        .upsert(profileData);
-
-      if (upsertError) {
-        console.error('Supabase error:', upsertError);
-        setError(`เกิดข้อผิดพลาด: ${upsertError.message}`);
+      if (error) {
+        console.error('Supabase error:', error);
+        setError(`เกิดข้อผิดพลาด: ${error.message}`);
         return;
       }
 
@@ -56,14 +78,9 @@ export default function Profile() {
         .eq('id', user.id)
         .single();
 
-      if (checkError) {
+      if (checkError || !checkData) {
         console.error('Error checking profile:', checkError);
         setError('ไม่สามารถตรวจสอบข้อมูลที่บันทึกได้');
-        return;
-      }
-
-      if (!checkData) {
-        setError('ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง');
         return;
       }
 

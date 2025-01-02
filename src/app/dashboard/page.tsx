@@ -8,6 +8,8 @@ interface Profile {
   name: string;
   age: number;
   rate: number;
+  email: string;
+  is_admin: boolean;
 }
 
 interface CheckIn {
@@ -42,6 +44,7 @@ export default function Dashboard() {
   const [editName, setEditName] = useState('');
   const [editAge, setEditAge] = useState('');
   const [editRate, setEditRate] = useState('');
+  const [editEmail, setEditEmail] = useState('');
   const [checkDate, setCheckDate] = useState('');
   const [selectedShift, setSelectedShift] = useState('');
   const [loading, setLoading] = useState(false);
@@ -68,7 +71,7 @@ export default function Dashboard() {
 
       const { data: profile } = await supabase
         .from('profiles')
-        .select('name, age, rate')
+        .select('name, age, rate, email, is_admin')
         .eq('id', user.id)
         .single();
 
@@ -78,9 +81,10 @@ export default function Dashboard() {
       }
 
       setProfile(profile);
-      setEditName(profile.name);
-      setEditAge(profile.age.toString());
-      setEditRate(profile.rate.toString());
+      setEditName(profile.name || '');
+      setEditAge(profile.age?.toString() || '');
+      setEditRate(profile.rate?.toString() || '');
+      setEditEmail(profile.email || '');
 
       // ดึงข้อมูล check ins และคำนวณ salary และ day time
       const { data: checkIns } = await supabase
@@ -228,6 +232,11 @@ export default function Dashboard() {
         return;
       }
 
+      if (!user.email) {
+        setError('ไม่พบข้อมูลอีเมล');
+        return;
+      }
+
       const { error: upsertError } = await supabase
         .from('profiles')
         .upsert({
@@ -235,6 +244,7 @@ export default function Dashboard() {
           name: editName,
           age: parseInt(editAge),
           rate: parseInt(editRate),
+          email: user.email,
           updated_at: new Date().toISOString(),
         });
 
@@ -246,7 +256,9 @@ export default function Dashboard() {
       setProfile({
         name: editName,
         age: parseInt(editAge),
-        rate: parseInt(editRate)
+        rate: parseInt(editRate),
+        email: user.email,
+        is_admin: profile?.is_admin || false
       });
       
       setShowEditModal(false);
@@ -343,9 +355,19 @@ export default function Dashboard() {
       <div className="mb-12">
         <p className="text-text-light/60 text-sm mb-1">Welcome ,</p>
         <div className="flex items-baseline justify-between">
-          <div className="flex items-baseline gap-2">
-            <h2 className="text-6xl font-league-gothic text-text-light tracking-wide">{profile.name.toUpperCase()}</h2>
-            <span className="text-6xl font-league-gothic text-accent">{profile.age}</span>
+          <div className="flex flex-col">
+            <div className="flex items-baseline gap-2">
+              <h2 className="text-6xl font-league-gothic text-text-light tracking-wide">{profile.name.toUpperCase()}</h2>
+              <span className="text-6xl font-league-gothic text-accent">{profile.age}</span>
+            </div>
+            <div className="flex items-center gap-2 mt-1">
+              <p className="text-sm text-text-light/60">{profile.email}</p>
+              {profile.is_admin && (
+                <span className="px-2 py-0.5 bg-accent/20 rounded text-accent text-xs">
+                  Admin
+                </span>
+              )}
+            </div>
           </div>
           <button 
             onClick={() => setShowEditModal(true)}
@@ -445,6 +467,23 @@ export default function Dashboard() {
         </button>
       </div>
 
+      {/* Admin Section */}
+      {profile.is_admin && (
+        <div className="mb-8">
+          <div className="h-px bg-text-light/10 mb-4" />
+          <h3 className="text-text-light/60 text-sm mb-4">Admin Tools</h3>
+          <button 
+            className="btn w-full h-14 text-lg font-medium bg-accent/20 hover:bg-accent"
+            onClick={() => router.push('/admin/summary')}
+          >
+            <div className="flex items-center justify-center gap-2">
+              <i className="fas fa-chart-bar"></i>
+              <span>System Summary</span>
+            </div>
+          </button>
+        </div>
+      )}
+
       {/* Logout */}
       <div className="text-center">
         <button 
@@ -496,6 +535,18 @@ export default function Dashboard() {
                   required
                   min="0"
                 />
+              </div>
+
+              <div>
+                <label className="block text-text-light mb-1.5 text-sm">อีเมล</label>
+                <input
+                  type="email"
+                  className="input w-full h-11 bg-text-light/5"
+                  value={editEmail}
+                  disabled
+                  readOnly
+                />
+                <p className="text-text-light/40 text-xs mt-1">อีเมลไม่สามารถแก้ไขได้</p>
               </div>
 
               {error && (
@@ -607,7 +658,7 @@ export default function Dashboard() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-bg-dark rounded-lg p-6 w-full max-w-[340px]">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-league-gothic text-text-light">รฏิทินลงเวลา</h2>
+              <h2 className="text-2xl font-league-gothic text-text-light">ปฏิทินลงเวลา</h2>
               <button 
                 onClick={() => setShowDayTimeModal(false)}
                 className="text-text-light/60 hover:text-accent"

@@ -3,8 +3,8 @@
 import { useState } from 'react';
 
 export default function Dashboard() {
-  const [dayTime, setDayTime] = useState(10);
-  const [overTime, setOverTime] = useState(4);
+  const [dayTime] = useState(10);
+  const [overTime] = useState(4);
   const [salary] = useState(5000);
 
   return (

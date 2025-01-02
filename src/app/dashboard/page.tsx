@@ -99,7 +99,7 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-bg-dark p-8">
+    <main className="min-h-screen bg-bg-dark px-layout-x py-layout-y">
       {/* Logo */}
       <div className="mb-12 text-center">
         <h1 className="text-3xl font-league-gothic text-text-light tracking-wide">MATCH</h1>

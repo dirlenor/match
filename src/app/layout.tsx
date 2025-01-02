@@ -1,9 +1,16 @@
 import type { Metadata } from 'next'
-import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Match App',
-  description: 'Check-in and salary request application',
+  title: 'Match Time',
+  description: 'Check in your time and request payment app',
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
+  themeColor: '#000000',
+  manifest: '/manifest.json'
 }
 
 export default function RootLayout({
@@ -12,10 +19,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen px-layout-x py-layout-y bg-bg-dark">
-        {children}
-      </body>
+    <html lang="th">
+      <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+      </head>
+      <body>{children}</body>
     </html>
   )
 }

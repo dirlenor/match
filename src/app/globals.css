@@ -7,13 +7,31 @@
 
 :root {
   --foreground-rgb: 255, 255, 255;
-  --background-rgb: 34, 34, 34;
+  --background-rgb: 0, 0, 0;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+  overflow: hidden;
   font-family: 'Athiti', 'Lato', sans-serif;
+}
+
+html {
+  height: -webkit-fill-available;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+* {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }
 
 h1, h2 {

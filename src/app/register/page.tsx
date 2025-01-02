@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signUp } from '@/lib/auth';
 
 export default function Register() {
-  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -76,8 +74,7 @@ export default function Register() {
         return;
       }
       setSuccess(true);
-      // ไม่ต้อง redirect อัตโนมัติ เพราะต้องให้ผู้ใช้ยืนยันอีเมลก่อน
-    } catch (err) {
+    } catch {
       setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);

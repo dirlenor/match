@@ -55,7 +55,7 @@ export default function Home() {
         return;
       }
       router.push('/dashboard');
-    } catch (err) {
+    } catch {
       setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);

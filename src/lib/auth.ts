@@ -19,7 +19,7 @@ export async function signUp(email: string, password: string): Promise<{ error: 
     }
 
     return { error: null };
-  } catch (err) {
+  } catch {
     return { error: { message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' } };
   }
 }

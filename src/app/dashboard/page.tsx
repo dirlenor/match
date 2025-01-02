@@ -15,6 +15,13 @@ interface CheckIn {
   shift: string;
 }
 
+interface CalendarDay {
+  date: Date;
+  isCurrentMonth: boolean;
+  hasCheckIn: boolean;
+  shift: string | undefined;
+}
+
 const SHIFTS = {
   morning: { label: 'เช้า (8:30 - 17:30)', value: 'morning', hours: 8 },
   evening: { label: 'เย็น (12:30 - 21:30)', value: 'evening', hours: 8 },
@@ -508,8 +515,8 @@ export default function Dashboard() {
                 firstCalendarDay.setDate(firstCalendarDay.getDate() - firstCalendarDay.getDay());
 
                 // สร้างอาเรย์ของสัปดาห์
-                const weeks = [];
-                let currentDay = new Date(firstCalendarDay);
+                const weeks: CalendarDay[][] = [];
+                const currentDay = new Date(firstCalendarDay);
 
                 while (currentDay <= lastDay || currentDay.getDay() !== 0) {
                   if (currentDay.getDay() === 0) {

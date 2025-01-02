@@ -1,6 +1,6 @@
 import type { Config } from "tailwindcss";
 
-export default {
+const config: Config = {
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -23,7 +23,7 @@ export default {
         "h4": "24px",
         "body": "16px",
       },
-      padding: {
+      spacing: {
         "layout-x": "16px",
         "layout-y": "50px",
       },
@@ -34,3 +34,5 @@ export default {
   },
   plugins: [],
 } satisfies Config;
+
+export default config;

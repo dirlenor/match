@@ -1,6 +1,6 @@
 "use client";
 
-export default function Home() {
+export default function Register() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-4 pt-16">
       <div className="text-center mb-16">
@@ -28,6 +28,14 @@ export default function Home() {
                 placeholder="Enter your password"
               />
             </div>
+            <div>
+              <label className="block text-text-light mb-1.5 text-sm">Confirm Password</label>
+              <input 
+                type="password" 
+                className="input w-full h-11"
+                placeholder="Confirm your password"
+              />
+            </div>
           </div>
           <button 
             type="submit" 
@@ -38,11 +46,11 @@ export default function Home() {
         </form>
 
         <div className="text-center mt-4">
-          <a href="/register" className="text-text-light hover:text-accent text-sm">
-            Don't have an account? Register here
+          <a href="/" className="text-text-light hover:text-accent text-sm">
+            Already have an account? Login here
           </a>
         </div>
       </div>
     </main>
   );
-}
+} 

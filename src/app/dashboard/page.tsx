@@ -184,6 +184,7 @@ export default function Dashboard() {
       const shiftLabel = SHIFTS[selectedShift as keyof typeof SHIFTS]?.label || selectedShift;
       await sendTelegramMessage(`🏢 มีการเช็คอินเข้างาน
 👤 ชื่อ: ${profile?.name || 'ไม่ระบุชื่อ'}
+📅 อีเมล: ${profile?.email || 'ไม่ระบุอีเมล'}
 📅 วันที่: ${new Date(checkDate).toLocaleDateString('th-TH', {
     year: 'numeric',
     month: 'long',
@@ -338,6 +339,7 @@ export default function Dashboard() {
       // อ่งการแจ้งเตือนไปยัง Telegram
       await sendTelegramMessage(`💰 มีการเบิกเงิน
 👤 ชื่อ: ${profile?.name || 'ไม่ระบุชื่อ'}
+📧 อีเมล: ${profile?.email || 'ไม่ระบุอีเมล'}
 💰 จำนวนเงิน: ${amount.toLocaleString()} บาท
 📅 วันที่: ${new Date(withdrawalDate).toLocaleDateString('th-TH', {
     year: 'numeric',

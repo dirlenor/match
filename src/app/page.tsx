@@ -1,66 +1,60 @@
 "use client";
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { signIn } from '@/lib/auth';
+import { supabase } from '@/lib/supabase';
+import LoginForm from '@/components/LoginForm';
 
 export default function Home() {
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const validateForm = () => {
-    if (!email) {
-      setError('กรุณากรอกอีเมล');
-      return false;
-    }
-    
-    if (!email.includes('@')) {
-      setError('กรุณากรอกอีเมลให้ถูกต้อง');
-      return false;
-    }
+  useEffect(() => {
+    checkSession();
+  }, []);
 
-    if (!password) {
-      setError('กรุณากรอกรหัสผ่าน');
-      return false;
-    }
-
-    return true;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setLoading(true);
-
+  const checkSession = async () => {
     try {
-      const { error: signInError } = await signIn(email, password, rememberMe);
-      if (signInError) {
-        if (signInError.message.includes('Invalid login credentials')) {
-          setError('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
-        } else if (signInError.message.includes('Email not confirmed')) {
-          setError('กรุณายืนยันอีเมลของคุณ');
-        } else {
-          setError(signInError.message);
-        }
+      // ตรวจสอบ session จาก localStorage ก่อน
+      const localSession = localStorage.getItem('supabase.auth.token');
+      if (localSession) {
+        router.push('/dashboard');
         return;
       }
-      router.push('/dashboard');
-    } catch {
-      setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
-    } finally {
-      setLoading(false);
+
+      // ถ้าไม่มีใน localStorage ให้ตรวจสอบ session ปัจจุบัน
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // ตรวจสอบว่ามีข้อมูล profile หรือไม่
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile) {
+          router.push('/dashboard');
+        } else {
+          router.push('/profile');
+        }
+      } else {
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Error checking session:', error);
+      setIsLoading(false);
     }
   };
+
+  if (isLoading) {
+    return (
+      <main className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin text-4xl">
+          <i className="fas fa-circle-notch text-text-light"></i>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-start p-4 pt-16">
@@ -71,70 +65,7 @@ export default function Home() {
       </div>
 
       <div className="w-full max-w-[340px]">
-        <form className="space-y-5" onSubmit={handleSubmit}>
-          <div className="space-y-5">
-            <div>
-              <label className="block text-text-light mb-1.5 text-sm">อีเมล</label>
-              <input 
-                type="email" 
-                className="input w-full h-11"
-                placeholder="กรอกอีเมลของคุณ"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-text-light mb-1.5 text-sm">รหัสผ่าน</label>
-              <input 
-                type="password" 
-                className="input w-full h-11"
-                placeholder="กรอกรหัสผ่าน"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="rememberMe"
-                className="w-4 h-4 rounded border-2 border-text-light bg-transparent checked:bg-accent checked:border-accent focus:ring-0 focus:ring-offset-0"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-              />
-              <label htmlFor="rememberMe" className="ml-2 text-text-light text-sm cursor-pointer">
-                จดจำฉันไว้
-              </label>
-            </div>
-          </div>
-          {error && (
-            <div className="text-red-500 text-sm text-center bg-red-100/10 p-2 rounded">
-              {error}
-            </div>
-          )}
-          <div className="mt-32">
-            <button 
-              type="submit" 
-              className="btn w-full h-11 group relative"
-              disabled={loading}
-            >
-              {loading ? (
-                <span className="inline-block animate-spin">
-                  <i className="fas fa-circle-notch text-text-light"></i>
-                </span>
-              ) : (
-                <i className="fas fa-arrow-right text-text-light group-hover:text-bg-dark"></i>
-              )}
-            </button>
-          </div>
-        </form>
-
-        <div className="text-center mt-4">
-          <Link href="/register" className="text-text-light hover:text-accent text-sm">
-            ยังไม่มีบัญชี? ลงทะเบียนที่นี่
-          </Link>
-        </div>
+        <LoginForm />
       </div>
     </main>
   );

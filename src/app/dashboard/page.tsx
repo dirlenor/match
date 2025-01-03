@@ -60,6 +60,7 @@ export default function Dashboard() {
     amount: number;
     withdrawal_date: string;
   }>>([]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date());
 
   useEffect(() => {
     const getProfile = async () => {
@@ -694,12 +695,45 @@ export default function Dashboard() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-bg-dark rounded-lg p-6 w-full max-w-[340px]">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-league-gothic text-text-light">ปฏิทินลงเวลา</h2>
+              <div>
+                <h2 className="text-2xl font-league-gothic text-text-light">ปฏิทินลงเวลา</h2>
+                <p className="text-text-light/60 text-sm">{profile?.name || 'ไม่ระบุชื่อ'}</p>
+              </div>
               <button 
                 onClick={() => setShowDayTimeModal(false)}
                 className="text-text-light/60 hover:text-accent"
               >
                 <i className="fas fa-times"></i>
+              </button>
+            </div>
+
+            {/* เพิ่มส่วนเลือกเดือน */}
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={() => {
+                  const newDate = new Date(selectedMonth);
+                  newDate.setMonth(newDate.getMonth() - 1);
+                  setSelectedMonth(newDate);
+                }}
+                className="text-text-light/60 hover:text-accent"
+              >
+                <i className="fas fa-chevron-left"></i>
+              </button>
+              <div className="text-text-light">
+                {selectedMonth.toLocaleDateString('th-TH', {
+                  month: 'long',
+                  year: 'numeric'
+                })}
+              </div>
+              <button
+                onClick={() => {
+                  const newDate = new Date(selectedMonth);
+                  newDate.setMonth(newDate.getMonth() + 1);
+                  setSelectedMonth(newDate);
+                }}
+                className="text-text-light/60 hover:text-accent"
+              >
+                <i className="fas fa-chevron-right"></i>
               </button>
             </div>
             
@@ -725,10 +759,9 @@ export default function Dashboard() {
                   ])
                 );
 
-                // หาวันแรกและวันสุดท้ายของเดือนปัจจุบัน
-                const today = new Date();
-                const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-                const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                // หาวันแรกและวันสุดท้ายของเดือนปี่เลือก
+                const firstDay = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
+                const lastDay = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
 
                 // หาวันแรกที่จะแสดงในปฏิทิน (อาจจะเป็นวันในเดือนก่อน)
                 const firstCalendarDay = new Date(firstDay);
@@ -745,7 +778,7 @@ export default function Dashboard() {
                     currentWeek = [];
                   }
 
-                  // แปลงวันที่เป็น YYYY-MM-DD โดยไม่ใช้ toISOString
+                  // แปลงวันที่เป็น YYYY-MM-DD
                   const year = currentDate.getFullYear();
                   const month = String(currentDate.getMonth() + 1).padStart(2, '0');
                   const day = String(currentDate.getDate()).padStart(2, '0');
@@ -753,12 +786,9 @@ export default function Dashboard() {
                   
                   const shift = checkInMap.get(dateString);
                   
-                  // แสดงข้อมูลเพื่อ debug
-                  console.log('Date:', dateString, 'Has Check-in:', Boolean(shift), 'Shift:', shift);
-                  
                   currentWeek.push({
                     date: new Date(currentDate),
-                    isCurrentMonth: currentDate.getMonth() === today.getMonth(),
+                    isCurrentMonth: currentDate.getMonth() === selectedMonth.getMonth(),
                     hasCheckIn: Boolean(shift),
                     shift: shift
                   });

@@ -79,3 +79,24 @@ input[type="checkbox"]:checked {
 .swipe-container {
   touch-action: pan-y pinch-zoom;
 }
+
+/* Snow Effect */
+.snow {
+  background-color: white;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.8;
+}
+
+@keyframes snowfall {
+  0% {
+    transform: translateY(-10vh) translateX(0);
+  }
+  100% {
+    transform: translateY(100vh) translateX(20px);
+  }
+}
+
+.animate-snow {
+  animation: snowfall 10s linear infinite;
+}

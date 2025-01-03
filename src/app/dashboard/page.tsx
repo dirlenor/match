@@ -31,6 +31,26 @@ const SHIFTS = {
   overtime: { label: 'OT (8:30 - 21:30)', value: 'overtime', hours: 13 }
 };
 
+const Snow = () => {
+  return (
+    <div className="snow-container fixed inset-0 pointer-events-none">
+      {[...Array(50)].map((_, i) => (
+        <div
+          key={i}
+          className="snow absolute animate-snow"
+          style={{
+            left: `${Math.random() * 100}%`,
+            animationDelay: `${Math.random() * 5}s`,
+            opacity: Math.random(),
+            width: `${Math.random() * 5 + 2}px`,
+            height: `${Math.random() * 5 + 2}px`
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
 export default function Dashboard() {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -396,9 +416,10 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-bg-dark px-layout-x py-layout-y">
+    <main className="min-h-screen bg-bg-dark px-layout-x py-layout-y relative overflow-hidden">
+      <Snow />
       {/* Logo */}
-      <div className="mb-12 text-center">
+      <div className="mb-12 text-center relative">
         <h1 className="text-3xl font-league-gothic text-text-light tracking-wide">MATCH</h1>
       </div>
 

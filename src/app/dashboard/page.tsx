@@ -182,7 +182,15 @@ export default function Dashboard() {
 
       // อ่งการแจ้งเตือนไปยัง Telegram
       const shiftLabel = SHIFTS[selectedShift as keyof typeof SHIFTS]?.label || selectedShift;
-      await sendTelegramMessage(`✅ <b>Check-in</b>\nวันที่: ${checkDate}\nกะ: ${shiftLabel}\nผู้ใช้: ${profile?.name || 'ไม่ระบุชื่อ'}`);
+      await sendTelegramMessage(`🏢 มีการเช็คอินเข้างาน
+👤 ชื่อ: ${profile?.name || 'ไม่ระบุชื่อ'}
+📅 วันที่: ${new Date(checkDate).toLocaleDateString('th-TH', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })}
+⏰ กะ: ${shiftLabel}
+💰 เรทค่าจ้าง: ${profile?.rate || 0} บาท/วัน`);
 
       // อัพเดท salary และ day time
       if (profile) {
@@ -318,7 +326,15 @@ export default function Dashboard() {
       }
 
       // อ่งการแจ้งเตือนไปยัง Telegram
-      await sendTelegramMessage(`💰 <b>การเบิกเงิน</b>\nจำนวน: ${amount.toLocaleString()} บาท\nวันที่: ${new Date(withdrawalDate).toLocaleDateString('th-TH')}\nผู้ใช้: ${profile?.name || 'ไม่ระบุชื่อ'}`);
+      await sendTelegramMessage(`💰 มีการเบิกเงิน
+👤 ชื่อ: ${profile?.name || 'ไม่ระบุชื่อ'}
+💰 จำนวนเงิน: ${amount.toLocaleString()} บาท
+📅 วันที่: ${new Date(withdrawalDate).toLocaleDateString('th-TH', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })}
+💵 ยอดคงเหลือ: ${(salary - totalWithdrawn - amount).toLocaleString()} บาท`);
 
       // อัพเดทยอดเงินที่เบิกไปแล้ว
       setTotalWithdrawn(prev => prev + amount);

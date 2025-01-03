@@ -246,49 +246,49 @@ export default function Dashboard() {
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
+    setError('');
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        setError('กรุณาเข้าสู่ระบบ');
-        return;
-      }
+      if (!user) throw new Error('ไม่พบข้อมูลผู้ใช้');
 
-      if (!user.email) {
-        setError('ไม่พบข้อมูลอีเมล');
-        return;
-      }
-
-      const { error: upsertError } = await supabase
-        .from('profiles')
-        .upsert({
-          id: user.id,
-          name: editName,
-          age: parseInt(editAge),
-          rate: parseInt(editRate),
-          email: user.email,
-          updated_at: new Date().toISOString(),
-        });
-
-      if (upsertError) {
-        setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
-        return;
-      }
-
-      setProfile({
+      const updates = {
+        id: user.id,
         name: editName,
         age: parseInt(editAge),
         rate: parseInt(editRate),
-        email: user.email,
-        is_admin: profile?.is_admin || false
+        email: editEmail,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .upsert(updates);
+
+      if (updateError) throw updateError;
+
+      // อัพเดตข้อมูล profile ในหน้า
+      setProfile({
+        ...profile!,
+        name: editName,
+        age: parseInt(editAge),
+        rate: parseInt(editRate),
+        email: editEmail,
       });
-      
+
+      // คำนวณเงินเดือนใหม่ตาม rate ที่เปลี่ยน
+      const normalSalary = checkInList.length * parseInt(editRate);
+      const otHours = checkInList.filter(checkIn => checkIn.shift === 'overtime').length * 4;
+      const otSalary = otHours * 60;
+      const totalSalary = normalSalary + otSalary;
+      setSalary(totalSalary);
+
       setShowEditModal(false);
-    } catch {
-      setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+      setSuccessMessage('แก้ไขข้อมูลสำเร็จ');
+      setShowSuccessModal(true);
+    } catch (error: any) {
+      setError(error.message);
     } finally {
       setLoading(false);
     }

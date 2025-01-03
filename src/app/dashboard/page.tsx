@@ -225,6 +225,16 @@ export default function Dashboard() {
       setShowCheckInModal(false);
       setCheckDate('');
       setSelectedShift('');
+
+      // แสดงข้อความแจ้งเตือนเมื่อสำเร็จ
+      setSuccessMessage(`เช็คอินสำเร็จ กะ${shiftLabel}`);
+      setShowSuccessModal(true);
+      
+      // ซ่อนข้อความแจ้งเตือนหลังจาก 3 วินาที
+      setTimeout(() => {
+        setShowSuccessModal(false);
+      }, 3000);
+
     } catch {
       setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     } finally {

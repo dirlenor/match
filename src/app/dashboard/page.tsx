@@ -297,8 +297,12 @@ export default function Dashboard() {
       setShowEditModal(false);
       setSuccessMessage('แก้ไขข้อมูลสำเร็จ');
       setShowSuccessModal(true);
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ');
+      }
     } finally {
       setLoading(false);
     }

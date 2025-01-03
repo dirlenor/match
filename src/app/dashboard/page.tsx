@@ -142,6 +142,16 @@ export default function Dashboard() {
     getProfile();
   }, [router]);
 
+  useEffect(() => {
+    if (showSuccessModal) {
+      const timer = setTimeout(() => {
+        setShowSuccessModal(false);
+        setSuccessMessage('');
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [showSuccessModal]);
+
   const handleCheckIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -584,11 +594,12 @@ export default function Dashboard() {
                 <label className="block text-text-light mb-1.5 text-sm">อีเมล</label>
                 <input
                   type="email"
-                  className="input w-full h-11"
+                  className="input w-full h-11 bg-gray-700 cursor-not-allowed"
                   value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  required
+                  disabled
+                  title="ไม่สามารถแก้ไขอีเมลได้"
                 />
+                <p className="text-text-light/60 text-xs mt-1">* ไม่สามารถแก้ไขอีเมลได้</p>
               </div>
 
               {error && (
@@ -964,8 +975,11 @@ export default function Dashboard() {
 
       {/* Success Modal */}
       {showSuccessModal && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-green-500/90 text-white px-4 py-2 rounded-lg shadow-lg">
-          {successMessage}
+        <div className="fixed top-4 right-4 bg-green-500/90 text-white px-4 py-2 rounded shadow-lg">
+          <div className="flex items-center gap-2">
+            <i className="fas fa-check-circle"></i>
+            <span>{successMessage}</span>
+          </div>
         </div>
       )}
 

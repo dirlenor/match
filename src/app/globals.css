@@ -131,3 +131,60 @@ input[type="checkbox"]:checked {
 .animate-snow:nth-child(3n+2) {
   --fall-duration: 12s;
 }
+
+/* Modal Animation */
+@keyframes modal-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes modal-fade-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes overlay-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.modal-overlay {
+  animation: overlay-fade-in 0.2s ease-out;
+}
+
+.modal-content {
+  animation: modal-fade-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-content.closing {
+  animation: modal-fade-out 0.2s ease-in forwards;
+}
+
+.modal-overlay.closing {
+  animation: overlay-fade-out 0.2s ease-in forwards;
+}

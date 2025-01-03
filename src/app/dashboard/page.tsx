@@ -83,6 +83,7 @@ export default function Dashboard() {
     withdrawal_date: string;
   }>>([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
+  const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
     const getProfile = async () => {
@@ -413,6 +414,14 @@ export default function Dashboard() {
     }
   };
 
+  const closeModal = (setShowModal: (show: boolean) => void) => {
+    setIsClosing(true);
+    setTimeout(() => {
+      setShowModal(false);
+      setIsClosing(false);
+    }, 200);
+  };
+
   if (!profile) {
     return null;
   }
@@ -571,12 +580,12 @@ export default function Dashboard() {
 
         {/* Edit Profile Modal */}
         {showEditModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-bg-dark rounded-lg p-6 w-full max-w-[340px]">
+          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
+            <div className={`bg-bg-dark rounded-lg p-6 w-full max-w-[340px] modal-content ${isClosing ? 'closing' : ''}`}>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-league-gothic text-text-light">แก้ไขข้อมูล</h2>
                 <button 
-                  onClick={() => setShowEditModal(false)}
+                  onClick={() => closeModal(setShowEditModal)}
                   className="text-text-light/60 hover:text-accent"
                 >
                   <i className="fas fa-times"></i>
@@ -639,7 +648,7 @@ export default function Dashboard() {
                 <div className="flex gap-2 pt-4">
                   <button
                     type="button"
-                    onClick={() => setShowEditModal(false)}
+                    onClick={() => closeModal(setShowEditModal)}
                     className="btn-secondary flex-1 h-11"
                   >
                     ยกเลิก
@@ -665,8 +674,8 @@ export default function Dashboard() {
 
         {/* Check In Modal */}
         {showCheckInModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-bg-dark rounded-lg p-6 w-full max-w-[340px]">
+          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
+            <div className={`bg-bg-dark rounded-lg p-6 w-full max-w-[340px] modal-content ${isClosing ? 'closing' : ''}`}>
               <h2 className="text-2xl font-league-gothic text-text-light mb-6">ลงเวลาทำงาน</h2>
               
               <form onSubmit={handleCheckIn} className="space-y-4">
@@ -705,12 +714,7 @@ export default function Dashboard() {
                 <div className="flex gap-2 pt-4">
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowCheckInModal(false);
-                      setCheckDate('');
-                      setSelectedShift('');
-                      setError('');
-                    }}
+                    onClick={() => closeModal(setShowCheckInModal)}
                     className="btn-secondary flex-1 h-11"
                   >
                     ยกเลิก
@@ -736,15 +740,15 @@ export default function Dashboard() {
 
         {/* Day Time List Modal */}
         {showDayTimeModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-bg-dark rounded-lg p-6 w-full max-w-[340px]">
+          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
+            <div className={`bg-bg-dark rounded-lg p-6 w-full max-w-[340px] modal-content ${isClosing ? 'closing' : ''}`}>
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-league-gothic text-text-light">ปฏิทินลงเวลา</h2>
                   <p className="text-text-light/60 text-sm">{profile?.name || 'ไม่ระบุชื่อ'}</p>
                 </div>
                 <button 
-                  onClick={() => setShowDayTimeModal(false)}
+                  onClick={() => closeModal(setShowDayTimeModal)}
                   className="text-text-light/60 hover:text-accent"
                 >
                   <i className="fas fa-times"></i>
@@ -899,12 +903,12 @@ export default function Dashboard() {
 
         {/* OT List Modal */}
         {showOTModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-bg-dark rounded-lg p-6 w-full max-w-[340px]">
+          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
+            <div className={`bg-bg-dark rounded-lg p-6 w-full max-w-[340px] modal-content ${isClosing ? 'closing' : ''}`}>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-league-gothic text-text-light">รายการ OT</h2>
                 <button 
-                  onClick={() => setShowOTModal(false)}
+                  onClick={() => closeModal(setShowOTModal)}
                   className="text-text-light/60 hover:text-accent"
                 >
                   <i className="fas fa-times"></i>
@@ -941,8 +945,8 @@ export default function Dashboard() {
 
         {/* Payment Modal */}
         {showPaymentModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-bg-dark rounded-lg p-6 w-full max-w-[340px]">
+          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
+            <div className={`bg-bg-dark rounded-lg p-6 w-full max-w-[340px] modal-content ${isClosing ? 'closing' : ''}`}>
               <h2 className="text-2xl font-league-gothic text-text-light mb-6">เบิกเงิน</h2>
               
               <form onSubmit={handleWithdraw} className="space-y-4">
@@ -973,11 +977,7 @@ export default function Dashboard() {
                 <div className="flex gap-2 pt-4">
                   <button
                     type="button"
-                    onClick={() => {
-                      setShowPaymentModal(false);
-                      setWithdrawAmount('');
-                      setError('');
-                    }}
+                    onClick={() => closeModal(setShowPaymentModal)}
                     className="btn-secondary flex-1 h-11"
                   >
                     ยกเลิก
@@ -1013,12 +1013,12 @@ export default function Dashboard() {
 
         {/* Withdrawal History Modal */}
         {showWithdrawalHistoryModal && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
-            <div className="bg-bg-dark rounded-lg p-6 w-full max-w-[340px]">
+          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
+            <div className={`bg-bg-dark rounded-lg p-6 w-full max-w-[340px] modal-content ${isClosing ? 'closing' : ''}`}>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-league-gothic text-text-light">ประวัติการเบิกเงิน</h2>
                 <button 
-                  onClick={() => setShowWithdrawalHistoryModal(false)}
+                  onClick={() => closeModal(setShowWithdrawalHistoryModal)}
                   className="text-text-light/60 hover:text-accent"
                 >
                   <i className="fas fa-times"></i>

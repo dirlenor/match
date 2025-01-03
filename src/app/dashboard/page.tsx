@@ -33,20 +33,22 @@ const SHIFTS = {
 
 const Snow = () => {
   return (
-    <div className="snow-container fixed inset-0 pointer-events-none">
-      {[...Array(50)].map((_, i) => (
-        <div
-          key={i}
-          className="snow absolute animate-snow"
-          style={{
-            left: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 5}s`,
-            opacity: Math.random(),
-            width: `${Math.random() * 5 + 2}px`,
-            height: `${Math.random() * 5 + 2}px`
-          }}
-        />
-      ))}
+    <div className="snow-container">
+      {[...Array(200)].map((_, i) => {
+        const size = Math.random() * 3 + 1;
+        return (
+          <div
+            key={i}
+            className="snow animate-snow"
+            style={{
+              left: `${Math.random() * 100}%`,
+              width: `${size}px`,
+              height: `${size}px`,
+              animationDelay: `${Math.random() * 15}s`,
+            }}
+          />
+        );
+      })}
     </div>
   );
 };

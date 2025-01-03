@@ -81,22 +81,52 @@ input[type="checkbox"]:checked {
 }
 
 /* Snow Effect */
-.snow {
-  background-color: white;
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0.8;
+.snow-container {
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 1;
 }
 
-@keyframes snowfall {
+.snow {
+  position: fixed;
+  top: -10px;
+  background: white;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(1px);
+  opacity: 0;
+}
+
+@keyframes fall {
   0% {
     transform: translateY(-10vh) translateX(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50vh) translateX(20px);
+    opacity: 0.8;
   }
   100% {
-    transform: translateY(100vh) translateX(20px);
+    transform: translateY(110vh) translateX(-20px);
+    opacity: 0.3;
   }
 }
 
 .animate-snow {
-  animation: snowfall 10s linear infinite;
+  animation: fall var(--fall-duration) linear infinite;
+}
+
+.animate-snow:nth-child(3n) {
+  --fall-duration: 8s;
+}
+
+.animate-snow:nth-child(3n+1) {
+  --fall-duration: 10s;
+}
+
+.animate-snow:nth-child(3n+2) {
+  --fall-duration: 12s;
 }

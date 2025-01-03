@@ -535,11 +535,19 @@ export default function Dashboard() {
       {showEditModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
           <div className="bg-bg-dark rounded-lg p-6 w-full max-w-[340px]">
-            <h2 className="text-2xl font-league-gothic text-text-light mb-6">แก้ไขข้อมูล</h2>
-            
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-league-gothic text-text-light">แก้ไขข้อมูล</h2>
+              <button 
+                onClick={() => setShowEditModal(false)}
+                className="text-text-light/60 hover:text-accent"
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+
             <form onSubmit={handleEditSubmit} className="space-y-4">
               <div>
-                <label className="block text-text-light mb-1.5 text-sm">ชื่อ</label>
+                <label className="block text-text-light mb-1.5 text-sm">จื่อ</label>
                 <input
                   type="text"
                   className="input w-full h-11"
@@ -557,33 +565,30 @@ export default function Dashboard() {
                   value={editAge}
                   onChange={(e) => setEditAge(e.target.value)}
                   required
-                  min="1"
-                  max="100"
                 />
               </div>
 
               <div>
-                <label className="block text-text-light mb-1.5 text-sm">อัตราค่าจ้าง</label>
+                <label className="block text-text-light mb-1.5 text-sm">เรทต่อวัน</label>
                 <input
                   type="number"
-                  className="input w-full h-11"
+                  className="input w-full h-11 bg-gray-700 cursor-not-allowed"
                   value={editRate}
-                  onChange={(e) => setEditRate(e.target.value)}
-                  required
-                  min="0"
+                  disabled
+                  title="ไม่สามารถแก้ไขเรทได้"
                 />
+                <p className="text-text-light/60 text-xs mt-1">* ไม่สามารถแก้ไขเรทได้</p>
               </div>
 
               <div>
                 <label className="block text-text-light mb-1.5 text-sm">อีเมล</label>
                 <input
                   type="email"
-                  className="input w-full h-11 bg-text-light/5"
+                  className="input w-full h-11"
                   value={editEmail}
-                  disabled
-                  readOnly
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  required
                 />
-                <p className="text-text-light/40 text-xs mt-1">อีเมลไม่สามารถแก้ไขได้</p>
               </div>
 
               {error && (

@@ -9,10 +9,6 @@ export default function Home() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    checkSession();
-  }, []);
-
   const checkSession = async () => {
     try {
       // ตรวจสอบ session จาก localStorage ก่อน
@@ -45,6 +41,10 @@ export default function Home() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    checkSession();
+  }, [router]);
 
   if (isLoading) {
     return (

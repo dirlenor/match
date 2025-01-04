@@ -135,12 +135,12 @@ export default function Dashboard() {
         
         // คำนวณชั่วโมง OT
         const otDays = checkIns.filter(checkIn => checkIn.shift === 'overtime');
-        const totalOTHours = otDays.reduce((total, _) => total + 4, 0); // คงเดิมที่ 4 ชั่วโมงต่อวัน
+        const totalOTHours = otDays.reduce((total) => total + 4, 0); // แก้ไขการใช้ parameter
         setOverTime(totalOTHours);
         
         // คำนวณ salary
         const normalSalary = checkIns.length * profile.rate;
-        const otSalary = totalOTHours * 60; // 60 บาทต่อชั่วโมง
+        const otSalary = totalOTHours * 60;
         const totalSalary = normalSalary + otSalary;
         
         setSalary(totalSalary);
@@ -250,12 +250,12 @@ export default function Dashboard() {
           
           // คำนวณชั่วโมง OT
           const otDays = checkIns.filter(checkIn => checkIn.shift === 'overtime');
-          const totalOTHours = otDays.reduce((total, _) => total + 4, 0); // คงเดิมที่ 4 ชั่วโมงต่อวัน
+          const totalOTHours = otDays.reduce((total) => total + 4, 0); // แก้ไขการใช้ parameter
           setOverTime(totalOTHours);
           
           // คำนวณ salary
           const normalSalary = checkIns.length * profile.rate;
-          const otSalary = totalOTHours * 60; // 60 บาทต่อชั่วโมง
+          const otSalary = totalOTHours * 60;
           const totalSalary = normalSalary + otSalary;
           
           setSalary(totalSalary);
@@ -485,7 +485,7 @@ export default function Dashboard() {
         
         // คำนวณชั่วโมง OT ใหม่
         const otDays = checkIns.filter(checkIn => checkIn.shift === 'overtime');
-        const totalOTHours = otDays.reduce((total, _) => total + 4, 0); // คงเดิมที่ 4 ชั่วโมงต่อวัน
+        const totalOTHours = otDays.reduce((total) => total + 4, 0); // แก้ไขการใช้ parameter
         setOverTime(totalOTHours);
         
         // คำนวณ salary ใหม่

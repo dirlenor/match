@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import LoginForm from '@/components/LoginForm';
@@ -9,7 +9,7 @@ export default function Home() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
 
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     try {
       // ตรวจสอบ session จาก localStorage ก่อน
       const localSession = localStorage.getItem('supabase.auth.token');
@@ -40,11 +40,11 @@ export default function Home() {
       console.error('Error checking session:', error);
       setIsLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     checkSession();
-  }, [router]);
+  }, [checkSession]);
 
   if (isLoading) {
     return (

@@ -25,11 +25,6 @@ interface CalendarDay {
   shift: string | undefined;
 }
 
-interface OTRecord {
-  hours: number;
-  date: string;
-}
-
 const SHIFTS = {
   morning: { label: 'เช้า (8:30 - 17:30)', value: 'morning', hours: 8 },
   evening: { label: 'เย็น (12:30 - 21:30)', value: 'evening', hours: 8 },
@@ -92,7 +87,6 @@ export default function Dashboard() {
   const [showAddOTModal, setShowAddOTModal] = useState(false);
   const [selectedOTDate, setSelectedOTDate] = useState('');
   const [otHours, setOTHours] = useState(4);
-  const [otRecords, setOTRecords] = useState<OTRecord[]>([]);
 
   useEffect(() => {
     const getProfile = async () => {

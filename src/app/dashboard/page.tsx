@@ -65,6 +65,9 @@ export default function Dashboard() {
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [isClosing, setIsClosing] = useState(false);
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
+  const [showAddOTModal, setShowAddOTModal] = useState(false);
+  const [selectedOTDate, setSelectedOTDate] = useState('');
+  const [otHours, setOTHours] = useState(4);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -178,6 +181,71 @@ export default function Dashboard() {
       } catch (error) {
         console.error('Unexpected error:', error);
         router.push('/');
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('name, age, rate, email, is_admin')
+        .eq('id', user.id)
+        .single();
+
+      if (!profile) {
+        router.push('/profile');
+        return;
+      }
+
+      setProfile(profile);
+      setEditName(profile.name || '');
+      setEditAge(profile.age?.toString() || '');
+      setEditRate(profile.rate?.toString() || '');
+      setEditEmail(profile.email || '');
+
+      // ดึงข้อมูล check ins และคำนวณ salary และ day time
+      const { data: checkIns } = await supabase
+        .from('check_ins')
+        .select('check_date, shift')
+        .eq('user_id', user.id)
+        .order('check_date', { ascending: true });
+
+      if (checkIns) {
+        setCheckInList(checkIns);
+        
+        // นับจำนวนวันทั้งหมดที่เข้างาน
+        setDayTime(checkIns.length);
+        
+        // คำนวณชั่วโมง OT
+        const otDays = checkIns.filter(checkIn => checkIn.shift === 'overtime');
+        const totalOTHours = otDays.reduce((total) => total + 4, 0); // แก้ไขการใช้ parameter
+        setOverTime(totalOTHours);
+        
+        // คำนวณ salary
+        const normalSalary = checkIns.length * profile.rate;
+        const otSalary = totalOTHours * 60;
+        const totalSalary = normalSalary + otSalary;
+        
+        setSalary(totalSalary);
+      }
+
+      // ดึงข้อมูล withdrawals
+      const { data: withdrawals } = await supabase
+        .from('withdrawals')
+        .select('amount')
+        .eq('user_id', user.id);
+
+      if (withdrawals) {
+        const total = withdrawals.reduce((sum, w) => sum + w.amount, 0);
+        setTotalWithdrawn(total);
+      }
+
+      // ดึงข้อมูลประวัติการเบิกเงิน
+      const { data: withdrawalHistory } = await supabase
+        .from('withdrawals')
+        .select('amount, withdrawal_date')
+        .eq('user_id', user.id)
+        .order('withdrawal_date', { ascending: false });
+
+      if (withdrawalHistory) {
+        setWithdrawalHistory(withdrawalHistory);
       }
     };
 
@@ -452,6 +520,96 @@ export default function Dashboard() {
     } catch (error) {
       console.error('Unexpected error:', error); // เพิ่ม error logging
       setError('เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่อีกครั้ง');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddOT = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setError('กรุณาเข้าสู่ระบบ');
+        return;
+      }
+
+      // ตรวจสอบว่าวันที่เลือกมีการ check in ไว้แล้วหรือไม่
+      const { data: existingCheckIn } = await supabase
+        .from('check_ins')
+        .select('shift')
+        .eq('user_id', user.id)
+        .eq('check_date', selectedOTDate)
+        .single();
+
+      if (!existingCheckIn) {
+        setError('ไม่พบข้อมูลการเช็คอินในวันที่เลือก');
+        return;
+      }
+
+      if (existingCheckIn.shift === 'overtime') {
+        setError('วันที่เลือกมีการลงเวลา OT ไว้แล้ว');
+        return;
+      }
+
+      // อัพเดทข้อมูลการ check in เป็น overtime
+      const { error: updateError } = await supabase
+        .from('check_ins')
+        .update({ shift: 'overtime' })
+        .eq('user_id', user.id)
+        .eq('check_date', selectedOTDate);
+
+      if (updateError) {
+        setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+        return;
+      }
+
+      // ส่งการแจ้งเตือนไปยัง Telegram
+      await sendTelegramMessage(`🕒 มีการเพิ่ม OT
+👤 ชื่อ: ${profile?.name || 'ไม่ระบุชื่อ'}
+📧 อีเมล: ${profile?.email || 'ไม่ระบุอีเมล'}
+📅 วันที่: ${new Date(selectedOTDate).toLocaleDateString('th-TH', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+})}
+⏰ จำนวนชั่วโมง: ${otHours} ชั่วโมง`);
+
+      // อัพเดทข้อมูลในหน้า
+      const { data: checkIns } = await supabase
+        .from('check_ins')
+        .select('check_date, shift')
+        .eq('user_id', user.id)
+        .order('check_date', { ascending: true });
+
+      if (checkIns) {
+        setCheckInList(checkIns);
+        
+        // คำนวณชั่วโมง OT ใหม่
+        const otDays = checkIns.filter(checkIn => checkIn.shift === 'overtime');
+        const totalOTHours = otDays.reduce((total) => total + 4, 0); // แก้ไขการใช้ parameter
+        setOverTime(totalOTHours);
+        
+        // คำนวณ salary ใหม่
+        const normalSalary = checkIns.length * (profile?.rate || 0);
+        const otSalary = totalOTHours * 60;
+        const totalSalary = normalSalary + otSalary;
+        setSalary(totalSalary);
+      }
+
+      setShowAddOTModal(false);
+      setSelectedOTDate('');
+      setOTHours(4);
+
+      // แสดงข้อความแจ้งเตือนเมื่อสำเร็จ
+      setSuccessMessage('เพิ่ม OT สำเร็จ');
+      setShowSuccessModal(true);
+    } catch {
+      setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
     }
@@ -1102,6 +1260,81 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add OT Modal */}
+        {showAddOTModal && (
+          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
+            <div className={`bg-bg-dark rounded-lg p-6 w-full max-w-[340px] modal-content ${isClosing ? 'closing' : ''}`}>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-league-gothic text-text-light">เพิ่ม OT</h2>
+                <button 
+                  onClick={() => closeModal(setShowAddOTModal)}
+                  className="text-text-light/60 hover:text-accent"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+
+              <form onSubmit={handleAddOT} className="space-y-4">
+                <div>
+                  <label className="block text-text-light mb-1.5 text-sm">วันที่</label>
+                  <input
+                    type="date"
+                    className="input w-full h-11"
+                    value={selectedOTDate}
+                    onChange={(e) => setSelectedOTDate(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-text-light mb-1.5 text-sm">จำนวนชั่วโมง OT</label>
+                  <select
+                    className="input w-full h-11"
+                    value={otHours}
+                    onChange={(e) => setOTHours(parseInt(e.target.value))}
+                    required
+                  >
+                    <option value="1">1 ชั่วโมง</option>
+                    <option value="2">2 ชั่วโมง</option>
+                    <option value="3">3 ชั่วโมง</option>
+                    <option value="4">4 ชั่วโมง</option>
+                  </select>
+                  <p className="text-text-light/60 text-xs mt-1">* สามารถเลือก OT ได้สูงสุด 4 ชั่วโมงต่อวัน</p>
+                </div>
+
+                {error && (
+                  <div className="text-red-500 text-sm text-center bg-red-100/10 p-2 rounded">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => closeModal(setShowAddOTModal)}
+                    className="btn-secondary flex-1 h-11"
+                  >
+                    ยกเลิก
+                  </button>
+                  <button
+                    type="submit"
+                    className="btn flex-1 h-11"
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <span className="inline-block animate-spin">
+                        <i className="fas fa-circle-notch text-text-light"></i>
+                      </span>
+                    ) : (
+                      'บันทึก'
+                    )}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         )}

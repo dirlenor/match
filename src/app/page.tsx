@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import LoginForm from '@/components/LoginForm';
@@ -9,11 +9,7 @@ export default function Home() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    checkSession();
-  }, []);
-
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
@@ -37,7 +33,11 @@ export default function Home() {
       console.error('Error checking session:', error);
       setIsLoading(false);
     }
-  };
+  }, [router]);
+
+  useEffect(() => {
+    checkSession();
+  }, [checkSession]);
 
   if (isLoading) {
     return (

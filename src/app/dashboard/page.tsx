@@ -1,5 +1,6 @@
 "use client";
 
+import React from 'react';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
@@ -9,6 +10,7 @@ interface Profile {
   name: string;
   age: number;
   rate: number;
+  fullday_rate: number;
   email: string;
   is_admin: boolean;
 }
@@ -28,29 +30,7 @@ interface CalendarDay {
 const SHIFTS = {
   morning: { label: 'เช้า (8:30 - 17:30)', value: 'morning', hours: 8 },
   evening: { label: 'เย็น (12:30 - 21:30)', value: 'evening', hours: 8 },
-  overtime: { label: 'OT (8:30 - 21:30)', value: 'overtime', hours: 13 }
-};
-
-const Snow = () => {
-  return (
-    <div className="snow-container">
-      {[...Array(200)].map((_, i) => {
-        const size = Math.random() * 3 + 1;
-        return (
-          <div
-            key={i}
-            className="snow animate-snow"
-            style={{
-              left: `${Math.random() * 100}%`,
-              width: `${size}px`,
-              height: `${size}px`,
-              animationDelay: `${Math.random() * 15}s`,
-            }}
-          />
-        );
-      })}
-    </div>
-  );
+  fullday: { label: 'เต็มวัน (8:30 - 21:30)', value: 'fullday', hours: 13, rate: 450 }
 };
 
 export default function Dashboard() {
@@ -84,85 +64,124 @@ export default function Dashboard() {
   }>>([]);
   const [selectedMonth, setSelectedMonth] = useState(new Date());
   const [isClosing, setIsClosing] = useState(false);
+  const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
 
   useEffect(() => {
-    const getProfile = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
+    const checkAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error || !session) {
+          console.error('Auth error:', error);
+          router.push('/');
+          return;
+        }
+
+        // ตรวจสอบว่า token ยังใช้งานได้
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          console.error('User error:', userError);
+          await supabase.auth.signOut();
+          router.push('/');
+          return;
+        }
+
+        // ถ้าผ่านการตรวจสอบแล้ว ดึงข้อมูล profile
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('name, age, rate, fullday_rate, email, is_admin')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError || !profile) {
+          console.error('Profile error:', profileError);
+          router.push('/profile');
+          return;
+        }
+
+        setProfile(profile);
+        setEditName(profile.name || '');
+        setEditAge(profile.age?.toString() || '');
+        setEditRate(profile.rate?.toString() || '');
+        setEditEmail(profile.email || '');
+
+        // ดึงข้อมูล check ins และคำนวณ salary และ day time
+        const { data: checkIns, error: checkInsError } = await supabase
+          .from('check_ins')
+          .select('check_date, shift')
+          .eq('user_id', user.id)
+          .order('check_date', { ascending: true });
+
+        if (checkInsError) {
+          console.error('Check-ins error:', checkInsError);
+          return;
+        }
+
+        if (checkIns) {
+          setCheckInList(checkIns);
+          
+          // แยกนับจำนวนวันตามประเภท
+          const normalDays = checkIns.filter(checkIn => 
+            checkIn.shift === 'morning' || 
+            checkIn.shift === 'evening' || 
+            checkIn.shift === 'fullday'
+          ).length;
+          const fulldayDays = checkIns.filter(checkIn => 
+            checkIn.shift === 'fullday'
+          ).length;
+          
+          setDayTime(normalDays);
+          setOverTime(fulldayDays);
+          
+          // คำนวณ salary
+          // - วันทำงานปกติ: จำนวนวันทั้งหมด × rate ปกติ
+          // - วันทำงานเต็มวัน: จำนวนวันเต็มวัน × (rate เต็มวัน - rate ปกติ) [ส่วนต่าง]
+          const normalSalary = normalDays * profile.rate;
+          const fulldayExtraSalary = fulldayDays * (profile.fullday_rate - profile.rate);
+          const totalSalary = normalSalary + fulldayExtraSalary;
+          
+          setSalary(totalSalary);
+        }
+
+        // ดึงข้อมูล withdrawals
+        const { data: withdrawals, error: withdrawalsError } = await supabase
+          .from('withdrawals')
+          .select('amount')
+          .eq('user_id', user.id);
+
+        if (withdrawalsError) {
+          console.error('Withdrawals error:', withdrawalsError);
+          return;
+        }
+
+        if (withdrawals) {
+          const total = withdrawals.reduce((sum, w) => sum + w.amount, 0);
+          setTotalWithdrawn(total);
+        }
+
+        // ดึงข้อมูลประวัติการเบิกเงิน
+        const { data: withdrawalHistory, error: historyError } = await supabase
+          .from('withdrawals')
+          .select('amount, withdrawal_date')
+          .eq('user_id', user.id)
+          .order('withdrawal_date', { ascending: false });
+
+        if (historyError) {
+          console.error('History error:', historyError);
+          return;
+        }
+
+        if (withdrawalHistory) {
+          setWithdrawalHistory(withdrawalHistory);
+        }
+      } catch (error) {
+        console.error('Unexpected error:', error);
         router.push('/');
-        return;
-      }
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('name, age, rate, email, is_admin')
-        .eq('id', user.id)
-        .single();
-
-      if (!profile) {
-        router.push('/profile');
-        return;
-      }
-
-      setProfile(profile);
-      setEditName(profile.name || '');
-      setEditAge(profile.age?.toString() || '');
-      setEditRate(profile.rate?.toString() || '');
-      setEditEmail(profile.email || '');
-
-      // ดึงข้อมูล check ins และคำนวณ salary และ day time
-      const { data: checkIns } = await supabase
-        .from('check_ins')
-        .select('check_date, shift')
-        .eq('user_id', user.id)
-        .order('check_date', { ascending: true });
-
-      if (checkIns) {
-        setCheckInList(checkIns);
-        
-        // นับจำนวนวันทั้งหมดที่เข้างาน
-        setDayTime(checkIns.length);
-        
-        // คำนวณชั่วโมง OT (4 ชั่วโมงต่อวัน)
-        const otDays = checkIns.filter(checkIn => checkIn.shift === 'overtime');
-        const otHours = otDays.length * 4; // 4 ชั่วโมง OT ต่อวัน
-        setOverTime(otHours);
-        
-        // คำนวณ salary
-        // - เงินเดือนปกติ: จำนวนวันทั้งหมด × rate
-        // - OT: จำนวนชั่วโมง OT × 60 บาท
-        const normalSalary = checkIns.length * profile.rate;
-        const otSalary = otHours * 60;
-        const totalSalary = normalSalary + otSalary;
-        
-        setSalary(totalSalary);
-      }
-
-      // ดึงข้อมูล withdrawals
-      const { data: withdrawals } = await supabase
-        .from('withdrawals')
-        .select('amount')
-        .eq('user_id', user.id);
-
-      if (withdrawals) {
-        const total = withdrawals.reduce((sum, w) => sum + w.amount, 0);
-        setTotalWithdrawn(total);
-      }
-
-      // ดึงข้อมูลประวัติการเบิกเงิน
-      const { data: withdrawalHistory } = await supabase
-        .from('withdrawals')
-        .select('amount, withdrawal_date')
-        .eq('user_id', user.id)
-        .order('withdrawal_date', { ascending: false });
-
-      if (withdrawalHistory) {
-        setWithdrawalHistory(withdrawalHistory);
       }
     };
 
-    getProfile();
+    checkAuth();
   }, [router]);
 
   useEffect(() => {
@@ -174,6 +193,21 @@ export default function Dashboard() {
       return () => clearTimeout(timer);
     }
   }, [showSuccessModal]);
+
+  // เพิ่ม useEffect สำหรับจัดการการคลิกนอก dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.settings-dropdown') && !target.closest('.settings-button')) {
+        setShowSettingsDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleCheckIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -210,20 +244,21 @@ export default function Dashboard() {
         });
 
       if (insertError) {
+        console.error('Check-in error:', insertError);
         setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
         return;
       }
 
-      // อ่งการแจ้งเตือนไปยัง Telegram
+      // ส่งการแจ้งเตือนไปยัง Telegram
       const shiftLabel = SHIFTS[selectedShift as keyof typeof SHIFTS]?.label || selectedShift;
       await sendTelegramMessage(`🏢 มีการเช็คอินเข้างาน
 👤 ชื่อ: ${profile?.name || 'ไม่ระบุชื่อ'}
-📅 อีเมล: ${profile?.email || 'ไม่ระบุอีเมล'}
+📧 อีเมล: ${profile?.email || 'ไม่ระบุอีเมล'}
 📅 วันที่: ${new Date(checkDate).toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })}
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+})}
 ⏰ กะ: ${shiftLabel}
 💰 เรทค่าจ้าง: ${profile?.rate || 0} บาท/วัน`);
 
@@ -238,40 +273,40 @@ export default function Dashboard() {
         if (checkIns) {
           setCheckInList(checkIns);
           
-          // นับจำนวนวันทั้งหมดที่เข้างาน
-          setDayTime(checkIns.length);
+          // แยกนับจำนวนวันตามประเภท
+          const normalDays = checkIns.filter(checkIn => 
+            checkIn.shift === 'morning' || 
+            checkIn.shift === 'evening' || 
+            checkIn.shift === 'fullday'
+          ).length;
+          const fulldayDays = checkIns.filter(checkIn => 
+            checkIn.shift === 'fullday'
+          ).length;
           
-          // คำนวณชั่วโมง OT (4 ชั่วโมงต่อวัน)
-          const otDays = checkIns.filter(checkIn => checkIn.shift === 'overtime');
-          const otHours = otDays.length * 4; // 4 ชั่วโมง OT ต่อวัน
-          setOverTime(otHours);
+          setDayTime(normalDays);
+          setOverTime(fulldayDays);
           
           // คำนวณ salary
-          // - เงินเดือนปกติ: จำนวนวันทั้งหมด × rate
-          // - OT: จำนวนชั่วโมง OT × 60 บาท
-          const normalSalary = checkIns.length * profile.rate;
-          const otSalary = otHours * 60;
-          const totalSalary = normalSalary + otSalary;
+          // - วันทำงานปกติ: จำนวนวันทั้งหมด × rate ปกติ
+          // - วันทำงานเต็มวัน: จำนวนวันเต็มวัน × (rate เต็มวัน - rate ปกติ) [ส่วนต่าง]
+          const normalSalary = normalDays * profile.rate;
+          const fulldayExtraSalary = fulldayDays * (profile.fullday_rate - profile.rate);
+          const totalSalary = normalSalary + fulldayExtraSalary;
           
           setSalary(totalSalary);
         }
       }
-      
-      setShowCheckInModal(false);
-      setCheckDate('');
-      setSelectedShift('');
 
       // แสดงข้อความแจ้งเตือนเมื่อสำเร็จ
       setSuccessMessage(`เช็คอินสำเร็จ กะ${shiftLabel}`);
       setShowSuccessModal(true);
-      
-      // ซ่อนข้อความแจ้งเตือนหลังจาก 3 วินาที
-      setTimeout(() => {
-        setShowSuccessModal(false);
-      }, 3000);
+      setShowCheckInModal(false);
+      setCheckDate('');
+      setSelectedShift('');
 
-    } catch {
-      setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+    } catch (error) {
+      console.error('Unexpected error:', error);
+      setError('เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
     }
@@ -360,31 +395,43 @@ export default function Dashboard() {
         return;
       }
 
-      const withdrawalDate = new Date().toISOString();
-      const { error: insertError } = await supabase
-        .from('withdrawals')
-        .insert({
-          user_id: user.id,
-          amount: amount,
-          withdrawal_date: withdrawalDate
-        });
-
-      if (insertError) {
-        setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+      // ตรวจสอบ user_id
+      if (!user.id) {
+        setError('ไม่พบข้อมูลผู้ใช้');
         return;
       }
 
-      // อ่งการแจ้งเตือนไปยัง Telegram
-      await sendTelegramMessage(`💸 มีการเบิกเงิน
+      const withdrawalDate = new Date().toISOString();
+      const withdrawData = {
+        user_id: user.id,
+        amount: amount,
+        withdrawal_date: withdrawalDate,
+      };
+
+      console.log('Sending withdrawal data:', withdrawData); // เพิ่ม log เพื่อตรวจสอบข้อมูล
+
+      const { data, error: insertError } = await supabase
+        .from('withdrawals')
+        .insert(withdrawData)
+        .select();
+
+      if (insertError) {
+        console.error('Withdrawal error:', insertError);
+        setError(insertError.message || 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+        return;
+      }
+
+      // ส่งการแจ้งเตือนไปยัง Telegram
+      await sendTelegramMessage(`💰 มีการเบิกเงิน
 👤 ชื่อ: ${profile?.name || 'ไม่ระบุชื่อ'}
 📧 อีเมล: ${profile?.email || 'ไม่ระบุอีเมล'}
-💰 จำนวนเงิน: ${amount.toLocaleString()} บาท
-📅 วันที่: ${new Date(withdrawalDate).toLocaleDateString('th-TH', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })}
-💵 ยอดคงเหลือ: ${(salary - totalWithdrawn - amount).toLocaleString()} บาท`);
+💵 จำนวนเงิน: ${amount.toLocaleString()} บาท
+📅 วันที่: ${new Date().toLocaleDateString('th-TH', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+})}
+💰 ยอดคงเหลือ: ${(salary - totalWithdrawn - amount).toLocaleString()} บาท`);
 
       // อัพเดทยอดเงินที่เบิกไปแล้ว
       setTotalWithdrawn(prev => prev + amount);
@@ -401,14 +448,10 @@ export default function Dashboard() {
       // แสดงข้อความแจ้งเตือนเมื่อสำเร็จ
       setSuccessMessage(`เบิกเงินสำเร็จ ${amount.toLocaleString()} บาท`);
       setShowSuccessModal(true);
-      
-      // ซ่อนข้อความแจ้งเตือนหลังจาก 3 วินาที
-      setTimeout(() => {
-        setShowSuccessModal(false);
-      }, 3000);
 
-    } catch {
-      setError('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+    } catch (error) {
+      console.error('Unexpected error:', error); // เพิ่ม error logging
+      setError('เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่อีกครั้ง');
     } finally {
       setLoading(false);
     }
@@ -416,6 +459,7 @@ export default function Dashboard() {
 
   const closeModal = (setShowModal: (show: boolean) => void) => {
     setIsClosing(true);
+    setError('');
     setTimeout(() => {
       setShowModal(false);
       setIsClosing(false);
@@ -427,177 +471,186 @@ export default function Dashboard() {
   }
 
   return (
-    <main className="min-h-screen bg-bg-dark px-layout-x py-layout-y relative">
-      <Snow />
-      <div className="relative z-10">
-        {/* Logo */}
-        <div className="mb-12 text-center">
-          <h1 className="text-3xl font-league-gothic text-text-light tracking-wide">MATCH</h1>
-        </div>
-
-        {/* Welcome Section */}
-        <div className="mb-12">
-          <p className="text-text-light/60 text-sm mb-1">Welcome ,</p>
-          <div className="flex items-baseline justify-between">
-            <div className="flex flex-col">
-              <div className="flex items-baseline gap-2">
-                <h2 className="text-6xl font-league-gothic text-text-light tracking-wide">{profile.name.toUpperCase()}</h2>
-                <span className="text-6xl font-league-gothic text-accent">{profile.age}</span>
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <p className="text-sm text-text-light/60">{profile.email}</p>
-                {profile.is_admin && (
-                  <span className="px-2 py-0.5 bg-accent/20 rounded text-accent text-xs">
-                    Admin
-                  </span>
+    <React.Fragment>
+      <main className="min-h-[100dvh] bg-white">
+        <div className="max-w-5xl mx-auto px-4 py-6 min-h-[100dvh] flex flex-col">
+          {/* Header Section */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-2xl font-athiti font-bold text-gray-800">สวัสดี, {profile.name}!</h1>
+              <p className="text-gray-500 mt-1">วันนี้คุณอยากทำอะไร?</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <button 
+                onClick={() => setShowEditModal(true)}
+                className="text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                <i className="fas fa-user-circle text-2xl"></i>
+              </button>
+              <div className="relative settings-dropdown">
+                <button 
+                  onClick={() => setShowSettingsDropdown(!showSettingsDropdown)}
+                  className="text-gray-500 hover:text-gray-700 transition-colors settings-button"
+                >
+                  <i className="fas fa-cog text-2xl"></i>
+                </button>
+                {showSettingsDropdown && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 border border-gray-100">
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full px-4 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                    >
+                      <i className="fas fa-sign-out-alt w-5"></i>
+                      <span>ออกจากระบบ</span>
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
-            <button 
-              onClick={() => setShowEditModal(true)}
-              className="text-text-light/60 hover:text-accent"
-            >
-              <i className="fas fa-edit"></i>
-            </button>
           </div>
-          <div className="mt-4 h-px bg-text-light/10" />
-        </div>
 
-        {/* Salary Section */}
-        <div className="mb-12">
-          <div className="flex items-center gap-2 mb-1">
-            <p className="text-text-light/60 text-sm">Salary</p>
-            <p className="text-decorate text-sm">( rate : {profile.rate} )</p>
-          </div>
-          <button 
-            onClick={() => setShowWithdrawalHistoryModal(true)}
-            className="w-full text-left group"
-          >
-            <p className="text-6xl font-league-gothic text-text-light tracking-wide group-hover:text-accent transition-colors">
-              {(salary - totalWithdrawn).toLocaleString()}
-            </p>
-            <p className="text-sm text-text-light/40 mt-1">
-              เบิกไปแล้ว: {totalWithdrawn.toLocaleString()}
-            </p>
-          </button>
-          <div className="mt-4 h-px bg-text-light/10" />
-        </div>
-
-        {/* Day Time Section */}
-        <div className="mb-12">
-          <p className="text-text-light/60 text-sm mb-1">Day Time</p>
-          <button 
-            onClick={() => setShowDayTimeModal(true)}
-            className="w-full text-left"
-          >
-            <p className="text-6xl font-league-gothic text-text-light tracking-wide hover:text-accent transition-colors">
-              {dayTime}
-            </p>
-          </button>
-          <div className="mt-2 bg-text-light/20 h-1.5 rounded-full overflow-hidden">
+          {/* Quick Stats */}
+          <div className="grid grid-cols-1 gap-4 mb-6">
+            {/* Header */}
+            <h2 className="text-2xl font-athiti font-bold text-gray-800">ลงเวลางาน</h2>
+            
+            {/* Salary Card */}
             <div 
-              className="h-full bg-accent rounded-full transition-all duration-300"
-              style={{ width: `${(dayTime / 24) * 100}%` }}
-            />
-          </div>
-          <div className="mt-4 h-px bg-text-light/10" />
-        </div>
-
-        {/* Over Time Section */}
-        <div className="mb-12">
-          <p className="text-text-light/60 text-sm mb-1">Over Time</p>
-          <button 
-            onClick={() => setShowOTModal(true)}
-            className="w-full text-left"
-          >
-            <p className="text-6xl font-league-gothic text-text-light tracking-wide hover:text-accent transition-colors">
-              {overTime}
-            </p>
-          </button>
-          <div className="mt-4 h-px bg-text-light/10" />
-        </div>
-
-        {/* Action Buttons */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
-          <button 
-            className="btn h-14 text-lg font-medium relative"
-            onClick={() => {
-              const today = new Date();
-              const year = today.getFullYear();
-              const month = String(today.getMonth() + 1).padStart(2, '0');
-              const day = String(today.getDate()).padStart(2, '0');
-              const formattedDate = `${year}-${month}-${day}`;
-              
-              setCheckDate(formattedDate);
-              setShowCheckInModal(true);
-            }}
-          >
-            <div className="flex flex-col items-center">
-              <span>Check in</span>
-              <span className="text-xs text-text-light/60 -mt-1">
-                {new Date().toLocaleDateString('en-GB', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: '2-digit'
-                })}
-              </span>
-            </div>
-          </button>
-          <button 
-            className="btn h-14 text-lg font-medium"
-            onClick={() => setShowPaymentModal(true)}
-          >
-            Payment
-          </button>
-        </div>
-
-        {/* Admin Section */}
-        {profile.is_admin && (
-          <div className="mb-8">
-            <div className="h-px bg-text-light/10 mb-4" />
-            <h3 className="text-text-light/60 text-sm mb-4">Admin Tools</h3>
-            <button 
-              className="btn w-full h-14 text-lg font-medium bg-accent/20 hover:bg-accent"
-              onClick={() => router.push('/admin/summary')}
+              className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-6 h-full"
             >
-              <div className="flex items-center justify-center gap-2">
-                <i className="fas fa-chart-bar"></i>
-                <span>System Summary</span>
+              <div className="flex items-center justify-center h-full">
+                <div className="text-center">
+                  <p className="text-blue-600 text-sm font-medium mb-1">ยอดเงินคงเหลือ</p>
+                  <h3 className="text-4xl font-semibold text-gray-800 mb-1">฿ {(salary - totalWithdrawn).toLocaleString()}</h3>
+                  <p className="text-blue-600/60 text-xs mt-1">เรท: {profile.rate} บาท/วัน</p>
+                </div>
               </div>
-            </button>
-          </div>
-        )}
+            </div>
 
-        {/* Logout */}
-        <div className="text-center">
-          <button 
-            onClick={handleLogout}
-            className="text-xs text-text-light/40 hover:text-accent transition-colors"
-          >
-            Logout
-          </button>
+            {/* Day Time and Full Day Cards Container */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Day Time Card */}
+              <div 
+                className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-6 h-full"
+              >
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <p className="text-green-600 text-sm font-medium mb-1">วันทำงาน</p>
+                    <h3 className="text-2xl font-semibold text-gray-800">{dayTime} วัน</h3>
+                    <div className="w-full bg-green-200 h-1 rounded-full mt-2">
+                      <div 
+                        className="bg-green-500 h-1 rounded-full transition-all duration-300"
+                        style={{ width: `${(dayTime / 24) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Full-day Work Card */}
+              <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-2xl p-6 h-full">
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <p className="text-yellow-600 text-sm font-medium mb-1">วันทำงานเต็มวัน</p>
+                    <h3 className="text-2xl font-semibold text-gray-800">{overTime} วัน</h3>
+                    <p className="text-yellow-600/60 text-xs mt-1">เรท {profile.fullday_rate} บาท/วัน</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Main Actions */}
+          <div className="mb-6 flex-grow">
+            <h2 className="text-2xl font-athiti font-bold text-gray-800 mb-4">การดำเนินการ</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <button 
+                onClick={() => {
+                  const today = new Date();
+                  const year = today.getFullYear();
+                  const month = String(today.getMonth() + 1).padStart(2, '0');
+                  const day = String(today.getDate()).padStart(2, '0');
+                  const formattedDate = `${year}-${month}-${day}`;
+                  
+                  setCheckDate(formattedDate);
+                  setError('');
+                  setShowCheckInModal(true);
+                }}
+                className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-500 hover:shadow-md transition-all group relative"
+              >
+                <div className="absolute top-2 right-3 text-sm text-gray-500">
+                  {new Date().toLocaleDateString('th-TH', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </div>
+                <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                  <i className="fas fa-sign-in-alt"></i>
+                </div>
+                <div className="text-left">
+                  <h3 className="text-gray-800 font-medium">เช็คอินวันนี้</h3>
+                  <p className="text-gray-500 text-sm">กดเพื่อเช็คอิน</p>
+                </div>
+              </button>
+
+              <button 
+                onClick={() => {
+                  setError('');
+                  setShowPaymentModal(true);
+                }}
+                className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 hover:border-green-500 hover:shadow-md transition-all group relative"
+              >
+                <div className="absolute top-2 right-3 text-sm text-gray-500">
+                  ฿ {(salary - totalWithdrawn).toLocaleString()}
+                </div>
+                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-500 group-hover:bg-green-500 group-hover:text-white transition-colors">
+                  <i className="fas fa-wallet"></i>
+                </div>
+                <div className="text-left">
+                  <h3 className="text-gray-800 font-medium">เบิกเงิน</h3>
+                  <p className="text-gray-500 text-sm">กดเพื่อเบิกเงิน</p>
+                </div>
+              </button>
+
+              {profile.is_admin && (
+                <button 
+                  onClick={() => router.push('/admin/summary')}
+                  className="flex items-center gap-4 bg-white border border-gray-200 rounded-xl p-4 hover:border-purple-500 hover:shadow-md transition-all group"
+                >
+                  <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-500 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                    <i className="fas fa-chart-bar"></i>
+                  </div>
+                  <div className="text-left">
+                    <h3 className="text-gray-800 font-medium">ระบบจัดการ</h3>
+                    <p className="text-gray-500 text-sm">สำหรับผู้ดูแลระบบ</p>
+                  </div>
+                </button>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Edit Profile Modal */}
+        {/* Modals */}
         {showEditModal && (
-          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
-            <div className={`bg-bg-dark rounded-lg p-6 w-full max-w-[340px] modal-content ${isClosing ? 'closing' : ''}`}>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-league-gothic text-text-light">แก้ไขข้อมูล</h2>
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-[340px] space-y-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xl font-athiti font-bold text-gray-800">ข้อมูลส่วนตัว</h3>
                 <button 
-                  onClick={() => closeModal(setShowEditModal)}
-                  className="text-text-light/60 hover:text-accent"
+                  onClick={() => setShowEditModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   <i className="fas fa-times"></i>
                 </button>
               </div>
 
-              <form onSubmit={handleEditSubmit} className="space-y-4">
+              <form className="space-y-4" onSubmit={handleEditSubmit}>
                 <div>
-                  <label className="block text-text-light mb-1.5 text-sm">จื่อ</label>
-                  <input
+                  <label className="block text-gray-600 mb-2 text-sm">ชื่อ</label>
+                  <input 
                     type="text"
-                    className="input w-full h-11"
+                    className="w-full h-12 px-4 bg-white border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     required
@@ -605,85 +658,97 @@ export default function Dashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-text-light mb-1.5 text-sm">อายุ</label>
-                  <input
+                  <label className="block text-gray-600 mb-2 text-sm">อายุ</label>
+                  <input 
                     type="number"
-                    className="input w-full h-11"
+                    className="w-full h-12 px-4 bg-white border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
                     value={editAge}
                     onChange={(e) => setEditAge(e.target.value)}
                     required
+                    min="1"
+                    max="100"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-text-light mb-1.5 text-sm">เรทต่อวัน</label>
-                  <input
+                  <label className="block text-gray-600 mb-2 text-sm">เรทปกติ (บาท/วัน)</label>
+                  <input 
                     type="number"
-                    className="input w-full h-11 bg-gray-700 cursor-not-allowed"
-                    value={editRate}
+                    className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-400 cursor-not-allowed"
+                    value={profile?.rate || 0}
                     disabled
-                    title="ไม่สามารถแก้ไขเรทได้"
+                    title="ไม่สามารถแก้ไขเรทปกติได้"
                   />
-                  <p className="text-text-light/60 text-xs mt-1">* ไม่สามารถแก้ไขเรทได้</p>
+                  <p className="text-gray-500 text-xs mt-1">* ไม่สามารถแก้ไขเรทปกติได้</p>
                 </div>
 
                 <div>
-                  <label className="block text-text-light mb-1.5 text-sm">อีเมล</label>
+                  <label className="block text-gray-600 mb-2 text-sm">เรทเต็มวัน (บาท/วัน)</label>
+                  <input 
+                    type="number"
+                    className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-400 cursor-not-allowed"
+                    value={profile?.fullday_rate || 0}
+                    disabled
+                    title="ไม่สามารถแก้ไขเรทเต็มวันได้"
+                  />
+                  <p className="text-gray-500 text-xs mt-1">* ไม่สามารถแก้ไขเรทเต็มวันได้</p>
+                </div>
+
+                <div>
+                  <label className="block text-gray-600 mb-2 text-sm">อีเมล</label>
                   <input
                     type="email"
-                    className="input w-full h-11 bg-gray-700 cursor-not-allowed"
+                    className="w-full h-12 px-4 bg-gray-50 border border-gray-200 rounded-lg text-gray-400 cursor-not-allowed"
                     value={editEmail}
                     disabled
                     title="ไม่สามารถแก้ไขอีเมลได้"
                   />
-                  <p className="text-text-light/60 text-xs mt-1">* ไม่สามารถแก้ไขอีเมลได้</p>
+                  <p className="text-gray-500 text-xs mt-1">* ไม่สามารถแก้ไขอีเมลได้</p>
                 </div>
 
                 {error && (
-                  <div className="text-red-500 text-sm text-center bg-red-100/10 p-2 rounded">
+                  <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
                     {error}
                   </div>
                 )}
 
-                <div className="flex gap-2 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => closeModal(setShowEditModal)}
-                    className="btn-secondary flex-1 h-11"
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn flex-1 h-11"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <span className="inline-block animate-spin">
-                        <i className="fas fa-circle-notch text-text-light"></i>
-                      </span>
-                    ) : (
-                      'บันทึก'
-                    )}
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="w-full h-12 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 transition-all duration-300"
+                >
+                  บันทึก
+                </button>
               </form>
             </div>
           </div>
         )}
 
-        {/* Check In Modal */}
         {showCheckInModal && (
-          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
-            <div className={`bg-bg-dark rounded-lg p-6 w-full max-w-[340px] modal-content ${isClosing ? 'closing' : ''}`}>
-              <h2 className="text-2xl font-league-gothic text-text-light mb-6">ลงเวลาทำงาน</h2>
+          <div 
+            className={`fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                closeModal(setShowCheckInModal);
+              }
+            }}
+          >
+            <div className="bg-white rounded-2xl p-6 w-full max-w-[340px] shadow-xl">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-athiti font-bold text-gray-800">ลงเวลาทำงาน</h2>
+                <button 
+                  onClick={() => closeModal(setShowCheckInModal)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
               
               <form onSubmit={handleCheckIn} className="space-y-4">
                 <div>
-                  <label className="block text-text-light mb-1.5 text-sm">วันที่</label>
+                  <label className="block text-gray-600 mb-2 text-sm">วันที่</label>
                   <input
                     type="date"
-                    className="input w-full h-11"
+                    className="w-full h-12 px-4 bg-white border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
                     value={checkDate}
                     onChange={(e) => setCheckDate(e.target.value)}
                     required
@@ -691,9 +756,9 @@ export default function Dashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-text-light mb-1.5 text-sm">กะ</label>
+                  <label className="block text-gray-600 mb-2 text-sm">กะ</label>
                   <select
-                    className="input w-full h-11"
+                    className="w-full h-12 px-4 bg-white border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
                     value={selectedShift}
                     onChange={(e) => setSelectedShift(e.target.value)}
                     required
@@ -706,7 +771,7 @@ export default function Dashboard() {
                 </div>
 
                 {error && (
-                  <div className="text-red-500 text-sm text-center bg-red-100/10 p-2 rounded">
+                  <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
                     {error}
                   </div>
                 )}
@@ -715,21 +780,21 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => closeModal(setShowCheckInModal)}
-                    className="btn-secondary flex-1 h-11"
+                    className="flex-1 h-11 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-all duration-300"
                   >
                     ยกเลิก
                   </button>
                   <button
                     type="submit"
-                    className="btn flex-1 h-11"
+                    className="flex-1 h-11 px-4 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition-all duration-300"
                     disabled={loading}
                   >
                     {loading ? (
                       <span className="inline-block animate-spin">
-                        <i className="fas fa-circle-notch text-text-light"></i>
+                        <i className="fas fa-circle-notch"></i>
                       </span>
                     ) : (
-                      'บันทึก'
+                      'ยืนยัน'
                     )}
                   </button>
                 </div>
@@ -738,24 +803,29 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Day Time List Modal */}
         {showDayTimeModal && (
-          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
-            <div className={`bg-bg-dark rounded-lg p-6 w-full max-w-[340px] modal-content ${isClosing ? 'closing' : ''}`}>
+          <div 
+            className={`fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                closeModal(setShowDayTimeModal);
+              }
+            }}
+          >
+            <div className={`bg-black/90 rounded-lg p-6 w-full max-w-[340px] modal-content border border-cyan-500/30 shadow-lg shadow-cyan-500/20 ${isClosing ? 'closing' : ''}`}>
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-league-gothic text-text-light">ปฏิทินลงเวลา</h2>
-                  <p className="text-text-light/60 text-sm">{profile?.name || 'ไม่ระบุชื่อ'}</p>
+                  <h2 className="text-2xl font-athiti font-bold text-gray-800">ปฏิทินลงเวลา</h2>
+                  <p className="text-cyan-400/60 text-sm">{profile?.name || 'ไม่ระบุชื่อ'}</p>
                 </div>
                 <button 
                   onClick={() => closeModal(setShowDayTimeModal)}
-                  className="text-text-light/60 hover:text-accent"
+                  className="text-cyan-400/60 hover:text-cyan-300"
                 >
                   <i className="fas fa-times"></i>
                 </button>
               </div>
 
-              {/* เพิ่มส่วนเลือกเดือน */}
               <div className="flex items-center justify-between mb-4">
                 <button
                   onClick={() => {
@@ -763,11 +833,11 @@ export default function Dashboard() {
                     newDate.setMonth(newDate.getMonth() - 1);
                     setSelectedMonth(newDate);
                   }}
-                  className="text-text-light/60 hover:text-accent"
+                  className="text-cyan-400/60 hover:text-cyan-300"
                 >
                   <i className="fas fa-chevron-left"></i>
                 </button>
-                <div className="text-text-light">
+                <div className="text-cyan-400">
                   {selectedMonth.toLocaleDateString('th-TH', {
                     month: 'long',
                     year: 'numeric'
@@ -779,15 +849,14 @@ export default function Dashboard() {
                     newDate.setMonth(newDate.getMonth() + 1);
                     setSelectedMonth(newDate);
                   }}
-                  className="text-text-light/60 hover:text-accent"
+                  className="text-cyan-400/60 hover:text-cyan-300"
                 >
                   <i className="fas fa-chevron-right"></i>
                 </button>
               </div>
               
               <div className="space-y-6">
-                {/* ส่วนหัวปฏิทิน */}
-                <div className="grid grid-cols-7 gap-1 text-center text-text-light/60 text-sm">
+                <div className="grid grid-cols-7 gap-1 text-center text-cyan-400 text-sm">
                   <div>อา</div>
                   <div>จ</div>
                   <div>อ</div>
@@ -797,9 +866,7 @@ export default function Dashboard() {
                   <div>ส</div>
                 </div>
 
-                {/* สร้างปฏิทินจากข้อมูล check-in */}
                 {(() => {
-                  // สร้าง Map ของวันที่มีการ check-in
                   const checkInMap = new Map(
                     checkInList.map(checkIn => [
                       checkIn.check_date,
@@ -807,15 +874,12 @@ export default function Dashboard() {
                     ])
                   );
 
-                  // หาวันแรกและวันสุดท้ายของเดือนปี่เลือก
                   const firstDay = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
                   const lastDay = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
 
-                  // หาวันแรกที่จะแสดงในปฏิทิน (อาจจะเป็นวันในเดือนก่อน)
                   const firstCalendarDay = new Date(firstDay);
                   firstCalendarDay.setDate(firstCalendarDay.getDate() - firstCalendarDay.getDay());
 
-                  // สร้างอาเรย์ของสัปดาห์
                   const weeks: CalendarDay[][] = [];
                   let currentWeek: CalendarDay[] = [];
                   let currentDate = new Date(firstCalendarDay);
@@ -826,7 +890,6 @@ export default function Dashboard() {
                       currentWeek = [];
                     }
 
-                    // แปลงวันที่เป็น YYYY-MM-DD
                     const year = currentDate.getFullYear();
                     const month = String(currentDate.getMonth() + 1).padStart(2, '0');
                     const day = String(currentDate.getDate()).padStart(2, '0');
@@ -858,7 +921,7 @@ export default function Dashboard() {
                               key={dayIndex}
                               className={`
                                 aspect-square flex flex-col items-center justify-center rounded
-                                ${day.isCurrentMonth ? 'text-text-light' : 'text-text-light/20'}
+                                ${day.isCurrentMonth ? 'text-cyan-300' : 'text-cyan-400/20'}
                                 ${day.hasCheckIn ? 'bg-white/5' : ''}
                               `}
                             >
@@ -869,7 +932,7 @@ export default function Dashboard() {
                                     w-1.5 h-1.5 rounded-full mt-0.5
                                     ${day.shift === 'morning' ? 'bg-yellow-500' : 
                                       day.shift === 'evening' ? 'bg-blue-500' : 
-                                      'bg-accent'}
+                                      'bg-cyan-500'}
                                   `}
                                 />
                               )}
@@ -882,7 +945,7 @@ export default function Dashboard() {
                 })()}
 
                 {/* คำอธิบายสัญลักษณ์ */}
-                <div className="flex items-center justify-center gap-4 text-sm text-text-light/60">
+                <div className="flex items-center justify-center gap-4 text-sm text-cyan-400/60">
                   <div className="flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-yellow-500" />
                     <span>เช้า</span>
@@ -892,7 +955,7 @@ export default function Dashboard() {
                     <span>เย็น</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <div className="w-1.5 h-1.5 rounded-full bg-accent" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
                     <span>OT</span>
                   </div>
                 </div>
@@ -901,41 +964,42 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* OT List Modal */}
         {showOTModal && (
-          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
-            <div className={`bg-bg-dark rounded-lg p-6 w-full max-w-[340px] modal-content ${isClosing ? 'closing' : ''}`}>
+          <div 
+            className={`fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                closeModal(setShowOTModal);
+              }
+            }}
+          >
+            <div className="bg-white rounded-2xl p-6 w-full max-w-[340px] shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-league-gothic text-text-light">รายการ OT</h2>
+                <h2 className="text-2xl font-athiti font-bold text-gray-800">รายการ OT</h2>
                 <button 
                   onClick={() => closeModal(setShowOTModal)}
-                  className="text-text-light/60 hover:text-accent"
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   <i className="fas fa-times"></i>
                 </button>
               </div>
               
-              <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-4">
                 {checkInList
                   .filter(checkIn => checkIn.shift === 'overtime')
                   .map((checkIn, index) => (
-                    <div 
-                      key={index}
-                      className="flex items-center justify-between p-3 rounded bg-white/5"
-                    >
-                      <div>
-                        <p className="text-text-light">
+                    <div key={index} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-gray-800 font-medium">
                           {new Date(checkIn.check_date).toLocaleDateString('th-TH', {
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric',
                           })}
-                        </p>
-                        <p className="text-text-light/60 text-sm">
-                          {SHIFTS[checkIn.shift as keyof typeof SHIFTS].label}
-                        </p>
+                        </span>
+                        <span className="text-gray-500 text-sm">{SHIFTS[checkIn.shift as keyof typeof SHIFTS].label}</span>
                       </div>
-                      <div className="w-2 h-2 rounded-full bg-accent" />
+                      <p className="text-gray-500 text-sm">฿ {(SHIFTS[checkIn.shift as keyof typeof SHIFTS].hours * 60).toLocaleString()}</p>
                     </div>
                   ))}
               </div>
@@ -943,65 +1007,63 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Payment Modal */}
         {showPaymentModal && (
-          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
-            <div className={`bg-bg-dark rounded-lg p-6 w-full max-w-[340px] modal-content ${isClosing ? 'closing' : ''}`}>
-              <h2 className="text-2xl font-league-gothic text-text-light mb-6">เบิกเงิน</h2>
+          <div 
+            className={`fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                closeModal(setShowPaymentModal);
+              }
+            }}
+          >
+            <div className="bg-white rounded-2xl p-6 w-full max-w-[340px] shadow-xl">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-athiti font-bold text-gray-800">เบิกเงิน</h2>
+                <button 
+                  onClick={() => closeModal(setShowPaymentModal)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
               
-              <form onSubmit={handleWithdraw} className="space-y-4">
+              <form onSubmit={handleWithdraw} className="space-y-6">
+                <div className="text-center p-4 bg-gray-50 rounded-lg">
+                  <p className="text-gray-600 text-sm mb-1">ยอดเงินที่เบิกได้</p>
+                  <p className="text-3xl font-semibold text-gray-800">฿ {(salary - totalWithdrawn).toLocaleString()}</p>
+                </div>
+
                 <div>
-                  <label className="block text-text-light mb-1.5 text-sm">จำนวนเงิน</label>
                   <input
                     type="number"
-                    className="input w-full h-11"
+                    className="w-full h-12 px-4 bg-white border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
-                    placeholder="ระบุจำนวนเงิน"
-                    required
-                    min="1"
+                    min="0"
                     max={salary - totalWithdrawn}
+                    placeholder="ระบุจำนวนเงินที่ต้องการเบิก"
+                    required
                   />
                 </div>
 
-                <div className="text-sm text-text-light/60">
-                  <p>ยอดเงินคงเหลือ: {(salary - totalWithdrawn).toLocaleString()}</p>
-                </div>
-
                 {error && (
-                  <div className="text-red-500 text-sm text-center bg-red-100/10 p-2 rounded">
+                  <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
                     {error}
                   </div>
                 )}
 
-                <div className="flex gap-2 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => closeModal(setShowPaymentModal)}
-                    className="btn-secondary flex-1 h-11"
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn flex-1 h-11"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <span className="inline-block animate-spin">
-                        <i className="fas fa-circle-notch text-text-light"></i>
-                      </span>
-                    ) : (
-                      'เบิกเงิน'
-                    )}
-                  </button>
-                </div>
+                <button
+                  type="submit"
+                  className="w-full h-12 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 transition-all duration-300"
+                  disabled={loading}
+                >
+                  {loading ? 'กำลังทำรายการ...' : 'ยืนยันการเบิกเงิน'}
+                </button>
               </form>
             </div>
           </div>
         )}
 
-        {/* Success Modal */}
         {showSuccessModal && (
           <div className="fixed top-4 right-4 bg-green-500/90 text-white px-4 py-2 rounded shadow-lg">
             <div className="flex items-center gap-2">
@@ -1011,52 +1073,39 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Withdrawal History Modal */}
         {showWithdrawalHistoryModal && (
-          <div className={`fixed inset-0 bg-black/50 flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}>
-            <div className={`bg-bg-dark rounded-lg p-6 w-full max-w-[340px] modal-content ${isClosing ? 'closing' : ''}`}>
+          <div 
+            className={`fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 modal-overlay ${isClosing ? 'closing' : ''}`}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                closeModal(setShowWithdrawalHistoryModal);
+              }
+            }}
+          >
+            <div className="bg-white rounded-2xl p-6 w-full max-w-[340px] shadow-xl">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-league-gothic text-text-light">ประวัติการเบิกเงิน</h2>
+                <h2 className="text-2xl font-athiti font-bold text-gray-800">ประวัติการเบิกเงิน</h2>
                 <button 
                   onClick={() => closeModal(setShowWithdrawalHistoryModal)}
-                  className="text-text-light/60 hover:text-accent"
+                  className="text-gray-400 hover:text-gray-600"
                 >
                   <i className="fas fa-times"></i>
                 </button>
               </div>
-              
-              <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-4">
                 {withdrawalHistory.map((withdrawal, index) => (
-                  <div 
-                    key={index}
-                    className="flex items-center justify-between p-3 rounded bg-white/5"
-                  >
-                    <div>
-                      <p className="text-text-light">
-                        {new Date(withdrawal.withdrawal_date).toLocaleDateString('th-TH', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
-                      </p>
-                      <p className="text-accent text-sm">
-                        {withdrawal.amount.toLocaleString()} บาท
-                      </p>
+                  <div key={index} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-gray-800 font-medium">฿ {withdrawal.amount.toLocaleString()}</span>
+                      <span className="text-gray-500 text-sm">{new Date(withdrawal.withdrawal_date).toLocaleDateString('th-TH')}</span>
                     </div>
-                    <div className="w-2 h-2 rounded-full bg-accent" />
                   </div>
                 ))}
-
-                {withdrawalHistory.length === 0 && (
-                  <p className="text-text-light/60 text-center py-4">
-                    ไม่มีประวัติการเบิกเงิน
-                  </p>
-                )}
               </div>
             </div>
           </div>
         )}
-      </div>
-    </main>
+      </main>
+    </React.Fragment>
   );
 } 

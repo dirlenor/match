@@ -35,13 +35,6 @@ export async function signIn(email: string, password: string, rememberMe: boolea
       return { error };
     }
 
-    if (rememberMe) {
-      localStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
-    } else {
-      sessionStorage.setItem('supabase.auth.token', JSON.stringify(data.session));
-      localStorage.removeItem('supabase.auth.token');
-    }
-
     return { error: null };
   } catch {
     return { error: { message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' } };
@@ -49,15 +42,15 @@ export async function signIn(email: string, password: string, rememberMe: boolea
 }
 
 export async function signOut(): Promise<{ error: AuthError | null }> {
-  localStorage.removeItem('supabase.auth.token');
-  sessionStorage.removeItem('supabase.auth.token');
-  const { error } = await supabase.auth.signOut();
-
-  if (error) {
-    return { error: { message: error.message } };
+  try {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      return { error: { message: error.message } };
+    }
+    return { error: null };
+  } catch {
+    return { error: { message: 'เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง' } };
   }
-
-  return { error: null };
 }
 
 export async function getCurrentUser() {

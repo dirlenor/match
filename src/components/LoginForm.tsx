@@ -63,68 +63,70 @@ export default function LoginForm() {
   };
 
   return (
-    <div className="w-full">
-      <form className="space-y-5" onSubmit={handleSubmit}>
-        <div className="space-y-5">
-          <div>
-            <label className="block text-text-light mb-1.5 text-sm">อีเมล</label>
-            <input 
-              type="email" 
-              className="input w-full h-11"
-              placeholder="กรอกอีเมลของคุณ"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-text-light mb-1.5 text-sm">รหัสผ่าน</label>
-            <input 
-              type="password" 
-              className="input w-full h-11"
-              placeholder="กรอกรหัสผ่าน"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="rememberMe"
-              className="w-4 h-4 rounded border-2 border-text-light bg-transparent checked:bg-accent checked:border-accent focus:ring-0 focus:ring-offset-0"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-            />
-            <label htmlFor="rememberMe" className="ml-2 text-text-light text-sm cursor-pointer">
-              จดจำฉันไว้
-            </label>
-          </div>
+    <div className="w-full max-w-[340px] bg-white rounded-2xl p-6 shadow-xl">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-athiti font-bold text-gray-800">เข้าสู่ระบบ</h2>
+      </div>
+
+      <form className="space-y-4" onSubmit={handleSubmit}>
+        <div>
+          <label className="block text-gray-600 mb-2 text-sm">อีเมล</label>
+          <input 
+            type="email" 
+            className="w-full h-12 px-4 bg-white border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
+            placeholder="กรอกอีเมลของคุณ"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
         </div>
+        <div>
+          <label className="block text-gray-600 mb-2 text-sm">รหัสผ่าน</label>
+          <input 
+            type="password" 
+            className="w-full h-12 px-4 bg-white border border-gray-200 rounded-lg text-gray-800 focus:outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
+            placeholder="กรอกรหัสผ่าน"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="rememberMe"
+            className="w-4 h-4 rounded border border-gray-300 text-blue-500 focus:ring-blue-500"
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+          />
+          <label htmlFor="rememberMe" className="ml-2 text-gray-600 text-sm cursor-pointer">
+            จดจำฉันไว้
+          </label>
+        </div>
+
         {error && (
-          <div className="text-red-500 text-sm text-center bg-red-100/10 p-2 rounded">
+          <div className="text-red-600 text-sm text-center bg-red-50 p-3 rounded-lg border border-red-200">
             {error}
           </div>
         )}
-        <div className="mt-32">
-          <button 
-            type="submit" 
-            className="btn w-full h-11 group relative"
-            disabled={loading}
-          >
-            {loading ? (
-              <span className="inline-block animate-spin">
-                <i className="fas fa-circle-notch text-text-light"></i>
-              </span>
-            ) : (
-              <i className="fas fa-arrow-right text-text-light group-hover:text-bg-dark"></i>
-            )}
-          </button>
-        </div>
+
+        <button
+          type="submit"
+          className="w-full h-12 bg-blue-500 text-white rounded-lg font-bold hover:bg-blue-600 transition-all duration-300"
+          disabled={loading}
+        >
+          {loading ? (
+            <span className="inline-block animate-spin">
+              <i className="fas fa-circle-notch"></i>
+            </span>
+          ) : (
+            'เข้าสู่ระบบ'
+          )}
+        </button>
       </form>
 
       <div className="text-center mt-4">
-        <Link href="/register" className="text-text-light hover:text-accent text-sm">
+        <Link href="/register" className="text-gray-600 hover:text-blue-500 text-sm transition-colors duration-300">
           ยังไม่มีบัญชี? ลงทะเบียนที่นี่
         </Link>
       </div>

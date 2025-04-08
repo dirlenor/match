@@ -4,11 +4,21 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 
+interface Profile {
+  name: string;
+  age: number;
+  rate: number;
+  fullday_rate: number;
+  email: string;
+  is_admin: boolean;
+}
+
 export default function Profile() {
   const router = useRouter();
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [rate, setRate] = useState('');
+  const [fulldayRate, setFulldayRate] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -30,7 +40,7 @@ export default function Profile() {
         return;
       }
 
-      if (!name || !age || !rate) {
+      if (!name || !age || !rate || !fulldayRate) {
         setError('กรุณากรอกข้อมูลให้ครบถ้วน');
         return;
       }
@@ -46,6 +56,7 @@ export default function Profile() {
         name: name.trim(),
         age: parseInt(age),
         rate: parseInt(rate),
+        fullday_rate: parseInt(fulldayRate),
         email: user.email,
         is_admin: user.email === 'thanawat.siriwisitthana@gmail.com',
         updated_at: new Date().toISOString()
@@ -132,6 +143,18 @@ export default function Profile() {
               className="input w-full h-11"
               value={rate}
               onChange={(e) => setRate(e.target.value)}
+              required
+              min="0"
+            />
+          </div>
+
+          <div>
+            <label className="block text-text-light mb-1.5 text-sm">Full Day Rate</label>
+            <input
+              type="number"
+              className="input w-full h-11"
+              value={fulldayRate}
+              onChange={(e) => setFulldayRate(e.target.value)}
               required
               min="0"
             />

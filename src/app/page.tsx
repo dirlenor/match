@@ -15,15 +15,8 @@ export default function Home() {
 
   const checkSession = async () => {
     try {
-      // ตรวจสอบ session จาก localStorage ก่อน
-      const localSession = localStorage.getItem('supabase.auth.token');
-      if (localSession) {
-        router.push('/dashboard');
-        return;
-      }
-
-      // ถ้าไม่มีใน localStorage ให้ตรวจสอบ session ปัจจุบัน
       const { data: { session } } = await supabase.auth.getSession();
+      
       if (session) {
         // ตรวจสอบว่ามีข้อมูล profile หรือไม่
         const { data: profile } = await supabase
@@ -57,14 +50,8 @@ export default function Home() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-start p-4 pt-16">
-      <div className="text-center mb-16">
-        <h1 className="text-[120px] sm:text-[167px] font-league-gothic text-text-light leading-none tracking-[-2%]">MATCH</h1>
-        <h2 className="text-[120px] sm:text-[167px] font-league-gothic text-text-light leading-none tracking-wide">TIME</h2>
-        <p className="text-text-light mt-4 text-sm">Check in your time and request payment app.</p>
-      </div>
-
-      <div className="w-full max-w-[340px]">
+    <main className="min-h-[100dvh] bg-white">
+      <div className="max-w-5xl mx-auto px-4 py-6 min-h-[100dvh] flex flex-col items-center justify-center">
         <LoginForm />
       </div>
     </main>
